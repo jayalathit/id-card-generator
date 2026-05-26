@@ -1,0 +1,956 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+import { Student, CardConfig } from '../types';
+import { 
+  User, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  ShieldCheck, 
+  Calendar, 
+  Briefcase, 
+  Award, 
+  BookOpen, 
+  Globe, 
+  Fingerprint
+} from 'lucide-react';
+
+interface IDCardProps {
+  student: Student;
+  config: CardConfig;
+  showBack?: boolean;
+}
+
+export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = false }) => {
+  const [frontQrUrl, setFrontQrUrl] = useState<string>('');
+  const [backQrUrl, setBackQrUrl] = useState<string>('');
+
+  const card_designation = student.cardDesignation || 'student';
+  const equipment_type = student.equipmentType || 'forklift';
+  const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
+    ? 'Counterbalance Forklift / Class A'
+    : 'JCB Backhoe Loader / Class A');
+
+  // Generate real dynamic QR codes when student data or URLs change
+  useEffect(() => {
+    // Front QR Code encodes the student profile summary
+    const designationLabel = card_designation === 'student' ? 'Student' : 'Certified Operator';
+    const specialtyLabel = equipment_type === 'forklift' ? 'Forklift' : 'Backhoe Loader';
+    const frontData = `Operator Status: ${designationLabel}\nSpecialty: ${specialtyLabel}\nName: ${student.name?.toUpperCase()}\nID No: ${student.idNumber?.toUpperCase()}\nNIC: ${student.nic?.toUpperCase()}\nGrade: ${student.grade?.toUpperCase()}\nInstitute: ${student.trainingCenter?.toUpperCase()}`;
+    
+    QRCode.toDataURL(frontData, {
+      margin: 1,
+      width: 140,
+      color: {
+        dark: '#0c2340',
+        light: '#ffffff'
+      }
+    })
+      .then(url => setFrontQrUrl(url))
+      .catch(err => console.error("Error generating front QR", err));
+
+    // Back QR Code encodes the direct verification website url
+    const backData = `https://${config.backVerificationUrl.replace(/^(https?:\/\/)?(www\.)?/, '')}?id=${student.idNumber}`;
+    QRCode.toDataURL(backData, {
+      margin: 1,
+      width: 200,
+      color: {
+        dark: '#0c2340',
+        light: '#ffffff'
+      }
+    })
+      .then(url => setBackQrUrl(url))
+      .catch(err => console.error("Error generating back QR", err));
+  }, [student, config.backVerificationUrl, card_designation, equipment_type]);
+
+  // A generic profile avatar placeholder SVG
+  const AvatarPlaceholder = () => (
+    <svg width="64" height="64" className="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+    </svg>
+  );
+
+  // High-fidelity graphic watermarks of Forklift or Backhoe Loader
+  const ForkliftWatermark = () => (
+    <svg width="180" height="180" viewBox="0 0 100 100" fill="currentColor" className="w-[180px] h-[180px] text-[#0c2340] opacity-[0.03] select-none pointer-events-none">
+      <path d="M5 65 h40 l10 -15 h15 v12 h-10 v15 h-55 z" />
+      <rect x="63" y="25" width="4" height="48" rx="1" />
+      <path d="M17 62 l6 -28 h18 l10 28" fill="none" stroke="currentColor" strokeWidth="3" />
+      <circle cx="16" cy="72" r="11" />
+      <circle cx="51" cy="72" r="11" />
+      <path d="M67 50 h22 v4 h-22 z" />
+      <path d="M79 54 v15 h10 v3 h-14 v-18 z" />
+    </svg>
+  );
+
+  const BackhoeWatermark = () => (
+    <svg width="180" height="180" viewBox="0 0 100 100" fill="currentColor" className="w-[180px] h-[180px] text-[#0c2340] opacity-[0.03] select-none pointer-events-none">
+      <path d="M30 35 h24 l8 20 h-32 z" fill="none" stroke="currentColor" strokeWidth="3" />
+      <rect x="25" y="55" width="30" height="15" />
+      <circle cx="28" cy="72" r="14" />
+      <circle cx="52" cy="75" r="9" />
+      <path d="M15 65 l-10 -18 l-12 10" fill="none" stroke="currentColor" strokeWidth="4" />
+      <path d="M55 65 l15 4 l8 -14 l-6 -6 z" />
+    </svg>
+  );
+
+  // ==========================================
+  // LANDSCAPE CARD RENDER (OPERATOR CARD METHOD)
+  // ==========================================
+  if (card_designation === 'operator') {
+    if (showBack) {
+      // Landscape Operator ID Back Side
+      const logoWords = config.backLogoLabel ? config.backLogoLabel.split(' ') : ["FAUGET", "HIGHSCHOOL"];
+      const logoFirst = logoWords[0] || "FAUGET";
+      const logoRest = logoWords.slice(1).join(' ') || "HIGHSCHOOL";
+
+      return (
+        <div 
+          id={`card-back-${student.id}`}
+          className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+          style={{ width: '650px', height: '410px', minWidth: '650px', minHeight: '410px' }}
+        >
+          {/* Subtle grid pattern inside */}
+          <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
+          
+          {/* Watermark in background */}
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+            {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
+          </div>
+
+          {/* Top wavy ribbon curve background layer */}
+          <div className="absolute top-0 left-0 right-0 h-[48px] overflow-hidden pointer-events-none select-none z-0">
+            <svg width="650" height="48" viewBox="0 0 650 48" className="w-full h-full" fill="none" preserveAspectRatio="none">
+              {/* Elegant golden transition stripe */}
+              <path d="M 0 0 C 180 32, 450 42, 650 18 L 650 0 Z" fill="#e2a812" opacity="0.9" />
+              {/* Solid dark blue header base */}
+              <path d="M 0 0 C 180 20, 450 30, 650 8 L 650 0 Z" fill="#0c2340" />
+            </svg>
+          </div>
+
+          {/* Top Row Header area */}
+          <div className="relative z-10 flex items-center justify-between mt-[2px] mb-2">
+            {/* Header left: OPERATOR ID with line */}
+            <div className="flex flex-col text-left">
+              <span className="font-sans font-black text-[23px] text-[#0c2340] tracking-tight uppercase leading-none">
+                OPERATOR ID
+              </span>
+              <div className="flex items-center gap-[1.5px] mt-1.5 h-[3px] w-28 rounded-full overflow-hidden">
+                <div className="h-full w-24 bg-[#e2a812]" />
+                <div className="h-full w-4 bg-[#0c2340]" />
+              </div>
+            </div>
+
+            {/* Header right: Institution brand model logo */}
+            <div className="flex items-center gap-2 pr-1">
+              <div className="w-8 h-8 rounded-full bg-[#0c2340]/5 border border-slate-100 flex items-center justify-center text-[#0c2340] shadow-sm">
+                <svg width="20" height="20" className="w-5 h-5 text-[#0c2340]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
+                  <path d="M19 12.18l-7 3.82-7-3.82V17l7 3.82 7-3.82v-4.82z" />
+                </svg>
+              </div>
+              <div className="flex flex-col leading-none text-left">
+                <span className="font-sans font-black text-[12px] text-[#0c2340] tracking-wider uppercase leading-none">
+                  {logoFirst}
+                </span>
+                <span className="text-[7.5px] font-extrabold text-slate-500 tracking-widest uppercase mt-[2.5px] leading-none">
+                  {logoRest}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Central content splitting columns */}
+          <div className="relative z-10 grid grid-cols-12 gap-5 items-stretch mt-[15px] px-1">
+            {/* Left side details */}
+            <div className="col-span-6 flex flex-col gap-[18px]">
+              <div className="flex items-start gap-3">
+                <div className="w-7.5 h-7.5 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-850">
+                  <ShieldCheck size={15} className="stroke-[2.5]" />
+                </div>
+                <p className="text-[10px] font-semibold text-slate-600 leading-normal text-left">
+                  This card is an official identification for authorized heavy equipment operators only. It is non-transferable and must be carried while on duty.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-7.5 h-7.5 bg-amber-50 rounded-full flex items-center justify-center text-[#e2a812] flex-shrink-0 shadow border border-amber-100">
+                  <Calendar size={15} className="stroke-[2.5]" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-[9.5px] font-black text-[#e2a812] uppercase tracking-wider leading-none">
+                    VALIDITY
+                  </span>
+                  <p className="text-[10px] font-semibold text-slate-600 leading-normal mt-[3px]">
+                    This ID card is valid for <span className="text-[#0c2340] font-black uppercase">TWO (2) YEARS</span> from the date of certification.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side verification */}
+            <div className="col-span-6 flex flex-col justify-start items-center">
+              <div className="bg-[#0c2340] text-center text-white rounded-lg py-[4px] px-6 text-[8px] font-black tracking-widest uppercase mb-1.5 w-[190px] shadow border border-slate-800">
+                VERIFY OPERATOR DETAILS
+              </div>
+              
+              <div className="bg-white border-2 border-slate-200 p-1.5 rounded-2xl shadow-md w-[114px] h-[114px] flex items-center justify-center">
+                {backQrUrl ? (
+                  <img src={backQrUrl} alt="Back Verification Qr code" className="w-[102px] h-[102px] object-contain" />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 rounded" />
+                )}
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5 px-3 flex items-center gap-2 max-w-[230px] w-full mt-2.5 shadow-inner">
+                <Globe size={13} className="text-[#0c2340] flex-shrink-0" />
+                <div className="flex flex-col leading-none text-left min-w-0">
+                  <span className="text-[7.5px] font-bold text-gray-400 uppercase leading-none pb-[2px] block">
+                    Website verification
+                  </span>
+                  <span className="text-[9.5px] font-extrabold text-[#e2a812] tracking-wide block truncate select-all">
+                    {config.backVerificationUrl}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Contacts Row */}
+          <div className="relative z-10 grid grid-cols-3 gap-3 border-t border-gray-200 pt-[10px] px-1 mt-auto pb-4">
+            {/* Column 1 Address */}
+            <div className="flex items-start gap-2">
+              <MapPin size={12} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
+              <div className="text-left">
+                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">ADDRESS</strong>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{config.backAddress || "Global Skills Institute\nNo. 123, Colombo."}</p>
+              </div>
+            </div>
+            {/* Column 2 Contact */}
+            <div className="flex items-start gap-2 border-x border-gray-200 px-2">
+              <Phone size={11} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
+              <div className="text-left">
+                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{config.backContactPhone || "+94 XX XXX XXXX"}<br/>{config.backContactEmail || "info@globalskills.lk"}</p>
+              </div>
+            </div>
+            {/* Column 3 Envelope */}
+            <div className="flex items-start gap-2">
+              <Mail size={12} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
+              <div className="text-left">
+                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">IN CASE FOUND</strong>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-normal">Please return to the address or contact number provided.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dark Blue bottom footer bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-[22px] bg-[#0c2340] pointer-events-none select-none flex items-center justify-center border-t border-slate-800">
+            <div className="flex items-center gap-4 w-full px-6">
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#e2a812]/50" />
+              <span className="text-[8px] font-sans font-black text-white uppercase tracking-[0.2em] mt-0.5 shrink-0 block">
+                SAFETY FIRST. SKILLS ALWAYS.
+              </span>
+              <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#e2a812]/50" />
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      // Landscape Operator ID Front Side (Image 1)
+      const infoRows = [
+        { label: 'NIC NO.', value: student.nic || '199012345V', icon: Fingerprint },
+        { label: 'NAME', value: student.name || 'JOHN PERERA', icon: User },
+        { label: 'ID NUMBER', value: student.idNumber || 'FI-2026-006', icon: Award },
+        { label: 'GRADE', value: student.grade || 'A', icon: ShieldCheck },
+        { label: 'COURSE', value: student.course || (equipment_type === 'forklift' ? 'FORKLIFT OPERATOR CERTIFICATION' : 'BACKHOE LOADER CERTIFICATION'), icon: BookOpen },
+        { label: 'ISSUE DATE', value: student.issueDate || '26/05/2026', icon: Calendar },
+        { label: 'TRAINING CENTER', value: student.trainingCenter || 'GLOBAL SKILLS INSTITUTE', icon: Briefcase }
+      ];
+
+      return (
+        <div 
+          id={`card-front-${student.id}`}
+          className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+          style={{ width: '650px', height: '410px', minWidth: '650px', minHeight: '410px' }}
+        >
+          {/* Subtle grid pattern inside */}
+          <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
+          
+          {/* Watermark in background */}
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+            {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
+          </div>
+
+          {/* Wavy golden ribbon curve backgrounds matching Image 1 */}
+          <div className="absolute top-0 right-0 w-[240px] h-[95px] pointer-events-none overflow-hidden z-0">
+            <svg width="240" height="95" viewBox="0 0 240 95" className="w-full h-full" fill="none" preserveAspectRatio="none">
+              {/* Elegant golden wavy underlying trim */}
+              <path d="M 0 0 C 60 45, 150 78, 240 16 L 240 0 Z" fill="#e2a812" opacity="0.95" />
+              {/* Navy wavy top overlay */}
+              <path d="M 20 0 C 80 38, 160 56, 240 0 L 240 0 Z" fill="#0c2340" />
+            </svg>
+          </div>
+
+          {/* Top Row Header area */}
+          <div className="relative z-10 flex items-center justify-between">
+            {/* Header left: Logo Box & JAYALATH Campus text */}
+            <div className="flex items-center select-none">
+              <div className="w-[110px] h-[52px] border border-dashed border-slate-300 rounded-[10px] bg-slate-50/50 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                {config.institutionLogo ? (
+                  <img src={config.institutionLogo} alt="Logo" className="max-h-full max-w-full object-contain p-1" />
+                ) : (
+                  <span className="text-[9.5px] font-bold text-slate-400 tracking-wider font-mono">LOGO HERE</span>
+                )}
+              </div>
+              <div className="flex flex-col text-left pl-3.5">
+                <span className="font-sans font-extrabold text-[23px] text-[#0c2340] leading-none tracking-tight">
+                  JAYALATH
+                </span>
+                <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
+                  {config.leftSubHeader || "CAMPUS FOR CONSTRUCTION & INDUSTRIAL TRAINING CENTER"}
+                </span>
+              </div>
+            </div>
+
+            {/* Subdued Vertical Divider line */}
+            <div className="w-[1px] h-8 bg-slate-200" />
+
+            {/* Header right: INSTITUTION branding */}
+            <div className="flex flex-col text-center pr-3 min-w-[120px]">
+              <span className="font-sans font-black text-[16px] tracking-tight text-[#0c2340] leading-none uppercase">
+                {config.rightMainHeader || "JAYALATH"}
+              </span>
+              <span className="text-[9px] font-bold text-[#e2a812] tracking-[0.15em] mt-1.5 leading-none uppercase">
+                — {config.rightSubHeader || "INSTITUTE"} —
+              </span>
+            </div>
+          </div>
+
+          {/* Central Section Grid */}
+          <div className="relative z-10 grid grid-cols-12 gap-4 items-start mt-4">
+            {/* Left side parameters list */}
+            <div className="col-span-8 flex flex-col gap-3">
+              {/* Title zone: Machine logo box + Heavy operator title labels */}
+              <div className="flex items-center gap-3 text-left">
+                {/* Visual indicator card */}
+                <div className="w-[42px] h-[42px] bg-sky-50 border border-sky-100 flex-shrink-0 flex items-center justify-center p-1.5 rounded-xl shadow-sm text-[#0c2340]">
+                  {equipment_type === 'forklift' ? (
+                    <svg width="32" height="32" viewBox="0 0 100 100" fill="currentColor" className="w-8 h-8">
+                      <path d="M12 65 h40 l10 -15 h15 v12 h-10 v15 h-55 z" />
+                      <rect x="70" y="25" width="4" height="48" rx="1" />
+                      <path d="M24 62 l6 -28 h18 l10 28" fill="none" stroke="currentColor" strokeWidth="3" />
+                      <circle cx="23" cy="72" r="11" />
+                      <circle cx="58" cy="72" r="11" />
+                      <path d="M74 50 h22 v4 h-22 z" />
+                      <path d="M86 54 v15 h10 v3 h-14 v-18 z" />
+                    </svg>
+                  ) : (
+                    <svg width="32" height="32" viewBox="0 0 100 100" fill="currentColor" className="w-8 h-8">
+                      <path d="M30 35 h24 l8 20 h-32 z" fill="none" stroke="currentColor" strokeWidth="3" />
+                      <rect x="25" y="55" width="30" height="15" />
+                      <circle cx="28" cy="72" r="14" />
+                      <circle cx="52" cy="75" r="9" />
+                      <path d="M15 65 l-10 -18 l-12 10" fill="none" stroke="currentColor" strokeWidth="4" />
+                      <path d="M55 65 l15 4 l8 -14 l-6 -6 z" />
+                    </svg>
+                  )}
+                </div>
+                
+                <div className="flex flex-col leading-none">
+                  <span className="font-sans font-black text-[21px] text-[#0c2340] tracking-tight uppercase">
+                    {equipment_type === 'forklift' ? 'FORKLIFT' : 'BACKHOE LOADER'}
+                  </span>
+                  <span className="font-sans font-black text-[18px] text-[#e2a812] tracking-wider uppercase mt-[2px] leading-none">
+                    OPERATOR ID
+                  </span>
+                </div>
+              </div>
+
+              {/* Rows Details columns list with colons - perfectly aligned */}
+              <div className="flex flex-col gap-[3px] w-full max-w-[380px]">
+                {infoRows.map((row, idx) => {
+                  const IconComp = row.icon;
+                  return (
+                    <div key={idx} className="flex items-center gap-2 pb-[1px] leading-none">
+                      {/* Round icon label button wrapper */}
+                      <div className="w-5 h-5 bg-[#0c2340] rounded flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-800">
+                        <IconComp size={10} className="stroke-[3]" />
+                      </div>
+                      {/* Wide fixed label column preventing line wrap */}
+                      <span className="w-[94px] text-[8px] font-bold text-slate-500 uppercase tracking-widest block text-left shrink-0">
+                        {row.label}
+                      </span>
+                      {/* Aligned colons column */}
+                      <span className="text-[10px] font-black text-[#0c2340] block w-[10px] shrink-0 text-center pr-1">:</span>
+                      {/* Uppercase formatted bold values for elite card design */}
+                      <span className="flex-1 text-[10px] font-black text-[#0c2340] uppercase truncate leading-none mt-[1px] text-left select-all tracking-[0.02em] font-sans">
+                        {String(row.value).toUpperCase()}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right side portrait photo, signature */}
+            <div className="col-span-4 flex flex-col items-center pl-1 shrink-0">
+              {/* Slate dark blue outline border enclosing custom photo */}
+              <div className="border-[2px] border-[#0c2340] rounded-[28px] w-[155px] h-[190px] bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center shadow-md">
+                {student.photo ? (
+                  <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-300">
+                    <AvatarPlaceholder />
+                    <div className="text-[7.5px] font-bold uppercase tracking-widest text-[#0c2340]/40 mt-2 leading-none">
+                      TRAINEE PHOTO
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Signature section below photo */}
+              <div className="flex flex-col items-center justify-center mt-3 z-10 w-full">
+                <div className="relative h-8 flex items-center justify-center w-[160px] overflow-hidden">
+                  {student.signatureType === 'typed' ? (
+                    <span className="font-formal-sig text-[32px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none">
+                      {student.signatureText || student.name || "D. Jayalath"}
+                    </span>
+                  ) : student.signatureImage ? (
+                    <img src={student.signatureImage} alt="Signature" className="h-7 max-w-[140px] mt-0.5 object-contain select-none pointer-events-none" />
+                  ) : (
+                    <span className="font-signature text-[20px] text-slate-400 italic font-medium">
+                      {student.name || "John Perera"}
+                    </span>
+                  )}
+                </div>
+                {/* Horizontal signature line */}
+                <div className="w-[155px] h-[1px] bg-slate-400" />
+                <span className="text-[7px] font-black text-slate-400 tracking-[0.2em] uppercase mt-[5px] block leading-none">
+                  SIGNATURE
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom QR & Validity row */}
+          <div className="relative z-10 flex items-end justify-between mt-auto px-1 pb-[9px]">
+            <div className="flex items-center gap-3">
+              {/* Perfect white QR container */}
+              <div className="bg-white border border-slate-200 p-0.5 rounded-lg shadow-sm w-[64px] h-[64px] flex items-center justify-center">
+                {frontQrUrl ? (
+                  <img src={frontQrUrl} alt="Front ID QR Code" className="w-[58px] h-[58px] object-contain" />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 rounded" />
+                )}
+              </div>
+
+              {/* Validity check tag bubble matching Image 1 */}
+              <div className="bg-[#0c2340] border border-slate-850 rounded-[10px] h-11 px-3 flex items-center gap-2.5 shadow-sm">
+                <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center text-[#e2a812] flex-shrink-0">
+                  <ShieldCheck size={11} className="stroke-[3]" />
+                </div>
+                <div className="flex flex-col text-left leading-none justify-center">
+                  <span className="text-[6.5px] font-bold text-[#e2a812] tracking-wider uppercase block">
+                    VALID FOR
+                  </span>
+                  <span className="text-[10px] font-black text-white mt-[2.5px] uppercase block tracking-wider">
+                    2 YEARS
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Solid Absolute Bottom Ribbon Footer Bar matching Image 1 */}
+          <div className="absolute bottom-0 left-0 right-0 h-9 bg-[#0c2340] pointer-events-none select-none rounded-b-[32px] overflow-hidden flex items-center justify-between px-6 z-10">
+            {/* Left side slanted gold bar ribbon */}
+            <div className="absolute left-0 bottom-0 top-0 w-8 bg-gradient-to-r from-[#e2a812] to-amber-500 h-full origin-bottom-left -skew-x-[24deg] border-r border-[#0c2340]" />
+            
+            {/* Centered slogans with high spacing */}
+            <span className="text-[9px] font-sans font-black tracking-[0.16em] text-white uppercase z-10 mx-auto block leading-none">
+              SAFE HANDS  •  SKILLED MINDS  •  STRONGER FUTURE
+            </span>
+
+            {/* Right side slanted gold bar ribbon */}
+            <div className="absolute right-0 bottom-0 top-0 w-8 bg-gradient-to-l from-[#e2a812] to-amber-500 h-full origin-bottom-right skew-x-[24deg] border-l border-[#0c2340]" />
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // ==========================================
+  // PORTRAIT CARD RENDER (STUDENT CARD METHOD)
+  // ==========================================
+  if (showBack) {
+    // Portrait Student ID Back Side
+    return (
+      <div 
+        id={`card-back-${student.id}`}
+        className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+        style={{ width: '410px', height: '650px', minWidth: '410px', minHeight: '650px' }}
+      >
+        {/* Punch Card Slot Punch representation on top */}
+        <div className="absolute top-2 left-0 right-0 z-20 flex justify-center">
+          <div className="w-[72px] h-[13px] bg-white rounded-full border border-gray-300 shadow-inner opacity-80" />
+        </div>
+
+        {/* Diagonal high-fidelity structural grid stripes */}
+        <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
+        
+        {/* Central Graphic Watermark watermark decoration */}
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+          {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
+        </div>
+
+        {/* Back Upper Banner Title Zone */}
+        <div className="relative z-10 flex items-center justify-between mt-3 mb-1 border-b border-gray-200/60 pb-2">
+          {/* logo cap decoration */}
+          <div className="w-[66px] h-[45px] border-[2.5px] border-[#0c2340] rounded-xl bg-white flex items-center justify-center shadow-sm">
+            <svg width="32" height="32" className="w-8 h-8 text-[#0c2340]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
+              <path d="M19 12.18l-7 3.82-7-3.82V17l7 3.82 7-3.82v-4.82z" />
+            </svg>
+          </div>
+
+          <div className="flex-1 text-right pl-3">
+            <h2 className="font-sans font-black text-[22px] tracking-tight text-[#0c2340] uppercase leading-none">
+              STUDENT ID
+            </h2>
+            <div className="flex justify-end items-center gap-1.5 mt-[5px]">
+              <span className="h-[2px] w-8 bg-[#e2a812] block rounded-full" />
+              <div className="flex gap-0.5">
+                <span className="w-1.5 h-2 bg-[#0c2340] -skew-x-[20deg]" />
+                <span className="w-1.5 h-2 bg-[#0c2340] -skew-x-[20deg]" />
+                <span className="w-1.5 h-2 bg-[#e2a812] -skew-x-[20deg]" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Central body containing instructions */}
+        <div className="relative z-10 flex-1 flex flex-col justify-between py-1 my-[2px] font-sans text-left gap-3">
+          
+          {/* Section: SAFETY INSTRUCTIONS */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296" />
+                </svg>
+              </span>
+              <span className="text-[10px] font-extrabold text-[#0c2340] tracking-wider uppercase leading-none">
+                SAFETY INSTRUCTIONS
+              </span>
+              <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
+            </div>
+            
+            <ul className="flex flex-col gap-1 pl-1 text-[8.5px] font-semibold text-slate-500 leading-tight">
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#e2a812] text-xs leading-none">•</span>
+                <span>Always follow safety rules and training procedures.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#e2a812] text-xs leading-none">•</span>
+                <span>Wear required Personal Protective Equipment (PPE) at all times.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#e2a812] text-xs leading-none">•</span>
+                <span>Report hazards, incidents, and near misses immediately.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#e2a812] text-xs leading-none">•</span>
+                <span>Use equipment ONLY if you are authorized and trained.</span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-[#e2a812] text-xs leading-none">•</span>
+                <span>This card is non-transferable and must be displayed while on-site.</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Section: EMERGENCY CONTACT */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                  <path d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25" />
+                </svg>
+              </span>
+              <span className="text-[10px] font-extrabold text-[#0c2340] tracking-wider uppercase leading-none">
+                EMERGENCY CONTACT
+              </span>
+              <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
+            </div>
+            <p className="text-[9px] text-[#0c2340] font-black pl-4 uppercase">
+              Contact: {config.backContactPhone || "+94 11 2 345 678"} <span className="text-gray-400 font-normal px-1">|</span> {config.backContactEmail || "INFO@JAYALATHCAMPUS.LK"}
+            </p>
+          </div>
+
+          {/* Section: QR CODE VERIFICATION PORT CAP */}
+          <div className="grid grid-cols-12 gap-3 items-center py-1.5 border-y border-slate-100">
+            {/* QR block Left Column */}
+            <div className="col-span-5 flex justify-center">
+              <div className="bg-white border-2 border-[#0c2340] p-1 rounded-xl shadow-md w-[100px] h-[100px] flex items-center justify-center">
+                {backQrUrl ? (
+                  <img src={backQrUrl} alt="Back Verification Qr code" className="w-[88px] h-[88px] object-contain" />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 rounded" />
+                )}
+              </div>
+            </div>
+
+            {/* Verification details capsule on right */}
+            <div className="col-span-7 flex flex-col gap-1.5">
+              <div className="bg-[#0c2340] text-white rounded-xl py-2.5 px-3 flex items-center justify-between gap-2.5 shadow border border-slate-850">
+                <div className="w-7 h-7 bg-white/10 rounded-full flex items-center justify-center text-[#e2a812] flex-shrink-0">
+                  <svg width="16" height="16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  </svg>
+                </div>
+                <div className="w-[1px] h-6 bg-white/20" />
+                <div className="flex-1 text-left min-w-0">
+                  <span className="text-[7.5px] font-black tracking-widest text-[#e2a812] block uppercase leading-none">
+                    VERIFY AT:
+                  </span>
+                  <span className="text-[9px] font-extrabold text-white block truncate leading-relaxed mt-0.5 select-all">
+                    {config.backVerificationUrl}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: AUTHORIZED STUDY STATEMENT */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                </svg>
+              </span>
+              <span className="text-[10px] font-extrabold text-[#0c2340] tracking-wider uppercase leading-none">
+                AUTHORIZED TRAINING STATEMENT
+              </span>
+              <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
+            </div>
+            <p className="text-[8.5px] text-slate-500 font-semibold pl-4 leading-normal">
+              This ID card is issued to the above-named trainee who is currently enrolled in an approved heavy equipment training program at Jayalath Campus for Construction & Industrial Training.
+            </p>
+          </div>
+
+          {/* Section: ADDRESS */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                  <path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </span>
+              <span className="text-[10px] font-extrabold text-[#0c2340] tracking-wider uppercase leading-none">
+                ADDRESS
+              </span>
+              <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
+            </div>
+            <p className="text-[8.5px] text-slate-500 font-semibold pl-4 leading-normal whitespace-pre-line tracking-tight uppercase">
+              {config.backAddress || "Jayalath Campus for Construction & Industrial Training\nNo. 123, Industrial Training Road,\nKandana, Western Province, Sri Lanka."}
+            </p>
+          </div>
+
+        </div>
+
+        {/* Absolute Bottom Solid bar curved */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none select-none overflow-hidden rounded-b-[32px] z-10">
+          <svg width="410" height="65" viewBox="0 0 410 65" className="absolute bottom-0 left-0 w-full h-[65px]" fill="none" preserveAspectRatio="none">
+            {/* Elegant wavy golden layer */}
+            <path d="M 0 30 Q 150 5, 410 40 L 410 65 L 0 65 Z" fill="#e2a812" opacity="0.9" />
+            {/* Dark Blue solid overlay */}
+            <path d="M 0 36 Q 160 14, 410 46 L 410 65 L 0 65 Z" fill="#0c2340" />
+          </svg>
+          
+          {/* Important warning contents inside curves */}
+          <div className="absolute bottom-2 left-4 right-4 z-20 flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#e2a812] flex items-center justify-center text-[#0b1b30] flex-shrink-0">
+              <span className="text-sm font-black text-[#0c2340] leading-none mb-0.5 font-mono">!</span>
+            </div>
+            <div className="text-left text-white leading-tight">
+              <span className="text-[7px] font-black text-[#e2a812] uppercase block tracking-wider">
+                IMPORTANT NOTE
+              </span>
+              <span className="text-[8.5px] font-bold text-slate-200 block truncate-2-lines max-w-[320px] uppercase">
+                This card is valid only during the training period shown on the front.
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    );
+  }
+
+  // Portrait Student ID Front Side (Image 2 styles)
+  return (
+    <div 
+      id={`card-front-${student.id}`}
+      className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-0 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+      style={{ width: '410px', height: '650px', minWidth: '410px', minHeight: '650px' }}
+    >
+      {/* Absolute top punch card slot representation */}
+      <div className="absolute top-2 left-0 right-0 z-20 flex justify-center">
+        <div className="w-[72px] h-[13px] bg-white rounded-full border border-gray-300 shadow-inner opacity-80" />
+      </div>
+
+      {/* Structured grid background decoration */}
+      <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
+
+      {/* Graphic Watermark background placement */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+        {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
+      </div>
+
+      {/* High Fidelity Curved Header Wave block */}
+      <div className="relative z-10 w-full bg-[#0c2340] pt-[28px] pb-[18px] px-[18px] flex flex-col justify-end text-white select-none shadow-md">
+        
+        {/* Upper Logo Area */}
+        <div className="flex justify-between items-center gap-3">
+          
+          {/* Institution Logo Box with golden border */}
+          <div className="w-[78px] h-[78px] border-[2px] border-[#e2a812] bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
+            {config.institutionLogo ? (
+              <img src={config.institutionLogo} alt="Logo" className="w-full h-full object-contain p-1" />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-1 font-mono text-center">
+                <svg width="40" height="40" className="w-10 h-10 text-[#0c2340]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L1 21h22L12 2zm0 4l7.5 13h-15L12 6z" />
+                </svg>
+                <span className="text-[5.5px] text-[#0c2340] font-bold block pt-1 tracking-tighter uppercase leading-none">
+                  CAMPUS ID
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Institution Names Column */}
+          <div className="flex-1 text-right pr-1">
+            <span className="font-sans font-black text-[22px] tracking-tight text-white block uppercase leading-none text-right">
+              {config.leftMainHeader || "JAYALATH CAMPUS"}
+            </span>
+            <span className="font-sans font-extrabold text-[7.5px] text-[#e2a812] uppercase tracking-wide block mt-[3px] leading-tight text-right">
+              {config.leftSubHeader || "FOR CONSTRUCTION & INDUSTRIAL TRAINING"}
+            </span>
+          </div>
+        </div>
+
+        {/* Dynamic Curved Swooshes splitting colors */}
+        <div className="absolute left-0 right-0 bottom-[-24px] h-[25px] z-10 pointer-events-none select-none">
+          <svg width="410" height="25" viewBox="0 0 410 25" className="absolute top-0 left-0 w-full h-full" fill="none" preserveAspectRatio="none">
+            {/* Elegant Golden Transition stripe */}
+            <path d="M 0 0 C 130 18, 280 20, 410 0 L 410 20 C 280 23, 130 14, 0 10 Z" fill="#e2a812" opacity="0.9" />
+            {/* Solid Navy Body mask */}
+            <path d="M 0 0 C 130 14, 280 18, 410 0 L 410 12 L 0 5 Z" fill="#0c2340" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Main Core Identity Details Container */}
+      <div className="relative z-10 px-4 pt-[18px] flex-1 flex flex-col justify-start">
+        
+        {/* Large centered card ID type designation */}
+        <div className="flex items-center justify-center gap-3.5 my-3">
+          <div className="h-[1.5px] flex-1 bg-gradient-to-r from-transparent to-[#e2a812]" />
+          <span className="font-sans font-black text-[21px] text-[#0c2340] tracking-[0.12em] block uppercase leading-none text-center">
+            STUDENT ID
+          </span>
+          <div className="h-[1.5px] flex-1 bg-gradient-to-l from-transparent to-[#e2a812]" />
+        </div>
+
+        {/* Profile and Detail Matrix block */}
+        <div className="grid grid-cols-12 gap-3.5 items-start my-2">
+          
+          {/* Column 1: Portrait photo with gold frame and rounded shadow */}
+          <div className="col-span-4 flex justify-center">
+            <div className="border-[2px] border-[#e2a812] rounded-2.5xl w-[114px] h-[138px] bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center shadow-lg">
+              {student.photo ? (
+                <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-300">
+                  <AvatarPlaceholder />
+                  <div className="text-[7.5px] font-bold uppercase tracking-widest text-[#0c2340]/40 mt-[3px] leading-none">
+                    TRAINEE PHOTO
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 2: Aligned Form values with grey bottom borders */}
+          <div className="col-span-8 flex flex-col justify-between h-[138px] text-left pl-1">
+            
+            {/* Full operator name */}
+            <div className="flex flex-col">
+              <span className="text-[6.5px] font-black text-slate-400 tracking-wider uppercase leading-none pb-0.5">
+                FULL NAME
+              </span>
+              <span className="text-[13px] font-extrabold text-[#0c2340] uppercase border-b border-slate-100 pb-[3px] leading-tight truncate">
+                {String(student.name || "JOHN PERERA").toUpperCase()}
+              </span>
+            </div>
+
+            {/* Unique register student ID */}
+            <div className="flex flex-col">
+              <span className="text-[6.5px] font-black text-slate-400 tracking-wider uppercase leading-none pb-0.5">
+                STUDENT / TRAINEE ID NO.
+              </span>
+              <span className="text-[12.5px] font-black text-[#0c2340] font-mono border-b border-slate-100 pb-[3px] leading-tight select-all">
+                {String(student.idNumber || "FI-2026-006").toUpperCase()}
+              </span>
+            </div>
+
+            {/* Course details title */}
+            <div className="flex flex-col">
+              <span className="text-[6.5px] font-black text-slate-400 tracking-wider uppercase leading-none pb-0.5">
+                COURSE TITLE
+              </span>
+              <span className="text-[11.5px] font-bold text-slate-600 border-b border-slate-100 pb-[3px] leading-tight truncate uppercase">
+                {String(student.course || (equipment_type === 'forklift' ? 'FORKLIFT OPERATOR CERTIFICATION' : 'BACKHOE LOADER CERTIFICATION')).toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Lower Row Items (Institutional Badge lists) */}
+        <div className="flex flex-col gap-2 mt-4 text-left">
+          
+          {/* Row 1: Issuing school platform */}
+          <div className="flex items-center gap-3 py-[2px] border-b border-slate-100">
+            <div className="w-7.5 h-7.5 bg-[#0c2340] border-[1.5px] border-[#e2a812] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+              <svg width="16" height="16" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
+                TRAINING INSTITUTE / COMPANY
+              </span>
+              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight truncate max-w-[244px] mt-[4px] uppercase">
+                {String(student.trainingCenter || "GLOBAL SKILLS INSTITUTE").toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          {/* Row 2: Equipment specialty type & Class */}
+          <div className="flex items-center gap-3 py-[2px] border-b border-slate-100">
+            <div className="w-7.5 h-7.5 bg-[#0c2340] border-[1.5px] border-[#e2a812] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+              <svg width="16" height="16" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
+                {equipment_type === 'forklift' ? 'FORKLIFT TYPE / CLASS' : 'BACKHOE LOADER TYPE'}
+              </span>
+              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight truncate max-w-[244px] mt-[4px] uppercase">
+                {String(equipment_class).toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          {/* Row 3: Dates */}
+          <div className="flex items-center gap-3 py-[2px]">
+            <div className="w-7.5 h-7.5 bg-[#0c2340] border-[1.5px] border-[#e2a812] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+              <svg width="16" height="16" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <rect width="18" height="18" x="3" y="4" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
+                DATE OF ENROLLMENT
+              </span>
+              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight truncate mt-[4px] uppercase">
+                {String(student.issueDate || '26/05/2026').toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Fine, Handwritten Signature Zone */}
+        <div className="mt-4 flex items-end justify-between px-1 border-t border-slate-100 pt-2.5">
+          <div className="text-left leading-none flex flex-col justify-end">
+            <span className="text-[6.5px] font-black text-slate-400 tracking-widest uppercase block mb-1">
+              INSTRUCTOR SIGNATURE
+            </span>
+            <div className="w-[124px] h-[1px] border-b border-dashed border-slate-300" />
+          </div>
+
+          {/* Dynamic Signature Vector Cursive */}
+          <div className="relative h-10 flex items-center justify-center pr-3 min-w-[130px] bottom-[3px] overflow-hidden">
+            {student.signatureType === 'typed' ? (
+              <span className="font-formal-sig text-[38px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none">
+                {student.signatureText || student.name || "D. Jayalath"}
+              </span>
+            ) : student.signatureImage ? (
+              <img src={student.signatureImage} alt="Signature" className="h-8 max-w-[140px] object-contain select-none pointer-events-none" />
+            ) : (
+              <span className="font-signature text-[25px] text-slate-400 italic font-normal">
+                D. Jayalath
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Solid Absolute Bottom Ribbon Footer with skewed side accents based on mockup */}
+      <div className="absolute bottom-0 left-0 right-0 h-[36px] bg-[#0c2340] pointer-events-none select-none rounded-b-[32px] overflow-hidden flex items-center justify-between px-6 z-10">
+        
+        {/* Left Side slanted gold bar */}
+        <div className="absolute left-0 bottom-0 top-0 w-8 bg-gradient-to-r from-[#e2a812] to-amber-500 h-full origin-bottom-left -skew-x-[24deg] border-r border-[#0c2340]" />
+        
+        {/* Center column footer metrics with gold icons */}
+        <div className="w-full h-full flex items-center justify-center gap-10 font-sans z-10 mx-auto">
+          {/* Badge 1: SKILL */}
+          <div className="flex items-center gap-1.5">
+            <svg width="14" height="14" className="w-3.5 h-3.5 text-[#e2a812]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.25z" />
+            </svg>
+            <span className="text-[9px] font-black tracking-wider text-white uppercase mt-0.5">
+              SKILL
+            </span>
+          </div>
+
+          {/* Badge 2: SAFETY */}
+          <div className="flex items-center gap-1.5">
+            <svg width="14" height="14" className="w-3.5 h-3.5 text-[#e2a812]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 15l-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z" />
+            </svg>
+            <span className="text-[9px] font-black tracking-wider text-white uppercase mt-0.5">
+              SAFETY
+            </span>
+          </div>
+
+          {/* Badge 3: PROGRESS */}
+          <div className="flex items-center gap-1.5">
+            <svg width="14" height="14" className="w-3.5 h-3.5 text-[#e2a812]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6.18-6.18 4 4L20 9.41 22.29 11.7 23 6z" />
+            </svg>
+            <span className="text-[9px] font-black tracking-wider text-white uppercase mt-0.5">
+              PROGRESS
+            </span>
+          </div>
+        </div>
+
+        {/* Right Side slanted gold bar */}
+        <div className="absolute right-0 bottom-0 top-0 w-8 bg-gradient-to-l from-[#e2a812] to-amber-500 h-full origin-bottom-right skew-x-[24deg] border-l border-[#0c2340]" />
+      </div>
+
+    </div>
+  );
+};

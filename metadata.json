@@ -1,0 +1,6 @@
+{
+  "name": "Forklift Operator ID Generator",
+  "description": "A student details manager and high-fidelity PDF ID card generator designed for Forklift Operator certification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
