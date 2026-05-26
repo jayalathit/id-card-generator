@@ -14,6 +14,7 @@ Identity data is protected with Supabase Auth and Row Level Security. Only authe
 
 1. Open the Supabase project SQL Editor.
 2. Run [`supabase/migrations/202605260001_initial_id_card_schema.sql`](supabase/migrations/202605260001_initial_id_card_schema.sql). It is safe to rerun when applying a policy update.
+   If tables already exist and photo/signature upload fails, run [`supabase/migrations/202605260002_student_assets_storage_policies.sql`](supabase/migrations/202605260002_student_assets_storage_policies.sql).
 3. Open **Authentication > Users** and create at least one staff email/password user.
 4. In SQL Editor, allow that user to access the app, replacing the email below:
 

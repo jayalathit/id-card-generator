@@ -74,6 +74,14 @@ const INITIAL_CONFIG: CardConfig = {
   backLogoLabel: 'JAYALATH CAMPUS'
 };
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+  return 'Unknown Supabase error.';
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -151,7 +159,7 @@ export default function App() {
         ));
       } catch (error) {
         console.error('Failed to load Supabase data:', error);
-        setDataError('Unable to load Supabase records. Apply the database setup migration, then refresh.');
+        setDataError(`Unable to load Supabase records: ${errorMessage(error)}`);
       } finally {
         setIsLoadingData(false);
       }
@@ -330,7 +338,7 @@ export default function App() {
       setEditingStudentId(null);
     } catch (error) {
       console.error('Failed to save student:', error);
-      setDataError('Could not save this record to Supabase. Confirm the database and Storage setup is complete.');
+      setDataError(`Could not save this record to Supabase: ${errorMessage(error)}`);
     } finally {
       setIsSavingStudent(false);
     }
@@ -354,7 +362,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('Failed to delete student:', error);
-      setDataError('Could not remove this record from Supabase.');
+      setDataError(`Could not remove this record from Supabase: ${errorMessage(error)}`);
     }
   };
 
@@ -391,7 +399,7 @@ export default function App() {
       setConfigNotice('Template settings saved to Supabase.');
     } catch (error) {
       console.error('Failed to save card settings:', error);
-      setDataError('Could not save template settings to Supabase.');
+      setDataError(`Could not save template settings to Supabase: ${errorMessage(error)}`);
     } finally {
       setIsSavingConfig(false);
     }
