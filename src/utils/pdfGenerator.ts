@@ -262,7 +262,8 @@ export async function downloadIDCardPDF(
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(7.5);
         pdf.setTextColor(130, 130, 130);
-        pdf.text('Generated via Operator ID Management Platform on May 26, 2026', 105, 260, { align: 'center' });
+        const generatedDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
+        pdf.text(`Generated via Operator ID Management Platform on ${generatedDate}`, 105, 260, { align: 'center' });
         
         pdf.save(filename);
       }

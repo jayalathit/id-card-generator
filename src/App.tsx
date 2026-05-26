@@ -8,7 +8,10 @@ import { Student, CardConfig } from './types';
 import { IDCard } from './components/IDCard';
 import { SignaturePad } from './components/SignaturePad';
 import { downloadIDCardPDF } from './utils/pdfGenerator';
-import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, ArrowUpRight, Upload, Sparkles, RefreshCw } from 'lucide-react';
+import { deleteStudent, loadWorkspaceData, saveCardConfig, saveStudent } from './services/idCardRepository';
+import { supabase } from './lib/supabase';
+import type { Session } from '@supabase/supabase-js';
+import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save } from 'lucide-react';
 
 const INITIAL_STUDENTS: Student[] = [
   {
@@ -72,22 +75,19 @@ const INITIAL_CONFIG: CardConfig = {
 };
 
 export default function App() {
-  // Persistence state
-  const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem('op_id_students');
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
-  });
-
-  const [config, setConfig] = useState<CardConfig>(() => {
-    const saved = localStorage.getItem('op_id_config');
-    return saved ? JSON.parse(saved) : INITIAL_CONFIG;
-  });
-
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
-    const saved = localStorage.getItem('op_id_students');
-    const parsed = saved ? JSON.parse(saved) : INITIAL_STUDENTS;
-    return parsed[0]?.id || 'student-1';
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [config, setConfig] = useState<CardConfig>(INITIAL_CONFIG);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [dataError, setDataError] = useState('');
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configNotice, setConfigNotice] = useState('');
 
   // UI state
   const [activeTab, setActiveTab] = useState<'students' | 'config'>('students');
@@ -105,23 +105,60 @@ export default function App() {
   const [formIssueDate, setFormIssueDate] = useState('25/05/2026');
   const [formTrainingCenter, setFormTrainingCenter] = useState('Global Skills Institute');
   const [formPhoto, setFormPhoto] = useState<string | undefined>(undefined);
+  const [formPhotoPath, setFormPhotoPath] = useState<string | undefined>(undefined);
   const [formSigType, setFormSigType] = useState<'handwritten' | 'typed' | 'uploaded'>('typed');
   const [formSigText, setFormSigText] = useState('');
   const [formSigImg, setFormSigImg] = useState<string | undefined>(undefined);
+  const [formSigPath, setFormSigPath] = useState<string | undefined>(undefined);
 
   // Added selectors for multi-equipment & multi-mode designs
   const [formCardDesignation, setFormCardDesignation] = useState<'student' | 'operator'>('student');
   const [formEquipmentType, setFormEquipmentType] = useState<'forklift' | 'backhoe'>('forklift');
   const [formEquipmentClass, setFormEquipmentClass] = useState('Counterbalance Forklift / Class A');
 
-  // Sync state to local storage
   useEffect(() => {
-    localStorage.setItem('op_id_students', JSON.stringify(students));
-  }, [students]);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setIsAuthLoading(false);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setIsAuthLoading(false);
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('op_id_config', JSON.stringify(config));
-  }, [config]);
+    if (!session) {
+      setStudents([]);
+      setSelectedStudentId('');
+      return;
+    }
+
+    const loadData = async () => {
+      setIsLoadingData(true);
+      setDataError('');
+      try {
+        const workspace = await loadWorkspaceData(INITIAL_CONFIG);
+        setStudents(workspace.students);
+        setConfig(workspace.config);
+        setSelectedStudentId((current) => (
+          workspace.students.some((student) => student.id === current)
+            ? current
+            : (workspace.students[0]?.id || '')
+        ));
+      } catch (error) {
+        console.error('Failed to load Supabase data:', error);
+        setDataError('Unable to load Supabase records. Apply the database setup migration, then refresh.');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    void loadData();
+  }, [session]);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId) || students[0];
 
@@ -135,9 +172,11 @@ export default function App() {
     issueDate: formIssueDate || '25/05/2026',
     trainingCenter: formTrainingCenter || 'Global Skills Institute',
     photo: formPhoto,
+    photoPath: formPhotoPath,
     signatureType: formSigType,
     signatureText: formSigType === 'typed' ? (formSigText || formName || 'John Perera') : undefined,
     signatureImage: formSigType !== 'typed' ? formSigImg : undefined,
+    signaturePath: formSigPath,
     cardDesignation: formCardDesignation,
     equipmentType: formEquipmentType,
     equipmentClass: formEquipmentClass
@@ -157,7 +196,7 @@ export default function App() {
     // Default form configuration as student & forklift
     setFormCardDesignation('student');
     setFormEquipmentType('forklift');
-    setFormIdNumber(`FI-2026-${paddedNum}`);
+    setFormIdNumber(`FL-2026-${paddedNum}`);
     setFormGrade('A');
     setFormCourse('Forklift Operator Training');
     setFormEquipmentClass('Counterbalance Forklift / Class A');
@@ -169,9 +208,11 @@ export default function App() {
     
     setFormTrainingCenter('Global Skills Institute');
     setFormPhoto(undefined);
+    setFormPhotoPath(undefined);
     setFormSigType('typed');
     setFormSigText('');
     setFormSigImg(undefined);
+    setFormSigPath(undefined);
   };
 
   // Start editing existing student
@@ -187,9 +228,11 @@ export default function App() {
     setFormIssueDate(student.issueDate);
     setFormTrainingCenter(student.trainingCenter);
     setFormPhoto(student.photo);
+    setFormPhotoPath(student.photoPath);
     setFormSigType(student.signatureType);
     setFormSigText(student.signatureText || '');
     setFormSigImg(student.signatureImage);
+    setFormSigPath(student.signaturePath);
 
     // Added selectors load
     setFormCardDesignation(student.cardDesignation || 'student');
@@ -201,6 +244,11 @@ export default function App() {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please choose an image smaller than 5 MB.');
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -213,6 +261,11 @@ export default function App() {
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please choose an image smaller than 5 MB.');
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -222,10 +275,22 @@ export default function App() {
   };
 
   // Save Operator Record
-  const handleSaveStudent = (e: React.FormEvent) => {
+  const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formNic || !formIdNumber) {
+    if (!formName.trim() || !formNic.trim() || !formIdNumber.trim()) {
       alert('Please fill out Name, NIC, and ID Number.');
+      return;
+    }
+
+    const normalizedNic = formNic.trim().toLowerCase();
+    const normalizedIdNumber = formIdNumber.trim().toLowerCase();
+    const duplicate = students.find((student) => (
+      student.id !== editingStudentId
+      && (student.nic.trim().toLowerCase() === normalizedNic
+        || student.idNumber.trim().toLowerCase() === normalizedIdNumber)
+    ));
+    if (duplicate) {
+      alert('NIC Number and ID/Cert Number must be unique for every card.');
       return;
     }
 
@@ -239,34 +304,57 @@ export default function App() {
       issueDate: formIssueDate,
       trainingCenter: formTrainingCenter,
       photo: formPhoto,
+      photoPath: formPhotoPath,
       signatureType: formSigType,
       signatureText: formSigType === 'typed' ? (formSigText || formName) : undefined,
       signatureImage: formSigType !== 'typed' ? formSigImg : undefined,
+      signaturePath: formSigPath,
       cardDesignation: formCardDesignation,
       equipmentType: formEquipmentType,
       equipmentClass: formEquipmentClass
     };
 
-    if (editingStudentId) {
-      setStudents(prev => prev.map(s => s.id === editingStudentId ? updatedStudent : s));
-    } else {
-      setStudents(prev => [...prev, updatedStudent]);
-      setSelectedStudentId(updatedStudent.id);
+    setIsSavingStudent(true);
+    setDataError('');
+    try {
+      const storedStudent = await saveStudent(updatedStudent);
+      if (editingStudentId) {
+        setStudents((previous) => previous.map((student) => (
+          student.id === editingStudentId ? storedStudent : student
+        )));
+      } else {
+        setStudents((previous) => [...previous, storedStudent]);
+      }
+      setSelectedStudentId(storedStudent.id);
+      setIsEditing(false);
+      setEditingStudentId(null);
+    } catch (error) {
+      console.error('Failed to save student:', error);
+      setDataError('Could not save this record to Supabase. Confirm the database and Storage setup is complete.');
+    } finally {
+      setIsSavingStudent(false);
     }
-
-    setIsEditing(false);
-    setEditingStudentId(null);
   };
 
   // Delete Operator
-  const handleDeleteStudent = (id: string, e: React.MouseEvent) => {
+  const handleDeleteStudent = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to remove this operator record?')) {
-      const remaining = students.filter(s => s.id !== id);
+    const student = students.find((candidate) => candidate.id === id);
+    if (!student || !confirm('Are you sure you want to remove this operator record?')) {
+      return;
+    }
+
+    setDataError('');
+    try {
+      await deleteStudent(student);
+      const remaining = students.filter((candidate) => candidate.id !== id);
       setStudents(remaining);
-      if (selectedStudentId === id && remaining.length > 0) {
-        setSelectedStudentId(remaining[0].id);
+      if (selectedStudentId === id) {
+        setSelectedStudentId(remaining[0]?.id || '');
       }
+    } catch (error) {
+      console.error('Failed to delete student:', error);
+      setDataError('Could not remove this record from Supabase.');
     }
   };
 
@@ -293,11 +381,96 @@ export default function App() {
   };
 
   // Reset to default settings
-  const handleResetSettings = () => {
-    if (confirm('Reset custom layouts to match default company mockups?')) {
-      setConfig(INITIAL_CONFIG);
+  const handleSaveSettings = async (nextConfig: CardConfig = config) => {
+    setIsSavingConfig(true);
+    setConfigNotice('');
+    setDataError('');
+    try {
+      const storedConfig = await saveCardConfig(nextConfig);
+      setConfig(storedConfig);
+      setConfigNotice('Template settings saved to Supabase.');
+    } catch (error) {
+      console.error('Failed to save card settings:', error);
+      setDataError('Could not save template settings to Supabase.');
+    } finally {
+      setIsSavingConfig(false);
     }
   };
+
+  const handleResetSettings = async () => {
+    if (confirm('Reset custom layouts to match default company mockups?')) {
+      setConfig(INITIAL_CONFIG);
+      await handleSaveSettings(INITIAL_CONFIG);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setIsAuthLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authEmail.trim(),
+      password: authPassword
+    });
+    if (error) {
+      setAuthError(error.message);
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-natural-cream flex items-center justify-center text-natural-sage">
+        <Loader2 className="w-7 h-7 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-natural-cream flex items-center justify-center p-6 font-sans">
+        <form onSubmit={handleSignIn} className="w-full max-w-sm bg-white border border-natural-border shadow-md rounded-2xl p-7 flex flex-col gap-4">
+          <div className="w-12 h-12 bg-natural-sage rounded-xl text-white flex items-center justify-center mb-1">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="font-display text-xl font-bold text-natural-darktext uppercase">Staff Sign In</h1>
+            <p className="text-xs text-natural-muted mt-1">Authorized access to operator credentials and card assets.</p>
+          </div>
+          {authError && (
+            <p className="text-xs bg-red-50 border border-red-200 rounded-lg p-2.5 text-red-700">{authError}</p>
+          )}
+          <label className="text-xs font-semibold text-natural-muted flex flex-col gap-1">
+            Email
+            <input
+              type="email"
+              value={authEmail}
+              onChange={(e) => setAuthEmail(e.target.value)}
+              className="border border-natural-darkborder rounded-lg p-2.5 text-natural-darktext outline-none focus:border-natural-sage"
+              required
+            />
+          </label>
+          <label className="text-xs font-semibold text-natural-muted flex flex-col gap-1">
+            Password
+            <input
+              type="password"
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.target.value)}
+              className="border border-natural-darkborder rounded-lg p-2.5 text-natural-darktext outline-none focus:border-natural-sage"
+              required
+            />
+          </label>
+          <button className="bg-natural-sage hover:bg-natural-sage-hover text-white rounded-lg py-2.5 text-xs font-bold uppercase tracking-wider">
+            Sign In
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-natural-cream text-natural-text flex flex-col font-sans select-none antialiased">
@@ -347,8 +520,24 @@ export default function App() {
               Template
             </button>
           </div>
+          <div className="hidden xl:flex flex-col text-right">
+            <span className="text-[9px] font-bold text-natural-muted uppercase tracking-widest">Signed in</span>
+            <span className="text-[10px] font-semibold text-natural-darktext">{session.user.email}</span>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 border border-natural-border bg-natural-panel hover:bg-natural-sand rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-natural-muted"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
+          </button>
         </div>
       </header>
+
+      {(dataError || configNotice) && (
+        <div className={`px-6 py-2 text-xs font-semibold border-b ${dataError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+          {dataError || configNotice}
+        </div>
+      )}
 
       {/* Main Area Split */}
       <main className="flex-1 grid grid-cols-12 overflow-hidden h-full">
@@ -457,7 +646,7 @@ export default function App() {
                     <input
                       type="text"
                       className="bg-white border border-natural-darkborder rounded px-2.5 py-2 text-natural-darktext outline-none focus:border-natural-sage"
-                      placeholder="e.g. FI-2026-001"
+                      placeholder="e.g. FL-2026-001"
                       value={formIdNumber}
                       onChange={(e) => setFormIdNumber(e.target.value)}
                       required
@@ -661,9 +850,11 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-natural-sage hover:bg-natural-sage-hover text-white font-bold uppercase rounded-lg tracking-wide text-xs transition-colors flex items-center justify-center gap-1.5"
+                  disabled={isSavingStudent}
+                  className="px-4 py-2 bg-natural-sage hover:bg-natural-sage-hover disabled:opacity-50 text-white font-bold uppercase rounded-lg tracking-wide text-xs transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" /> Save Record
+                  {isSavingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {isSavingStudent ? 'Saving' : 'Save Record'}
                 </button>
               </div>
             </form>
@@ -682,6 +873,11 @@ export default function App() {
 
               {/* Scrollable grid student cards */}
               <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1">
+                {isLoadingData && (
+                  <div className="p-5 flex items-center justify-center text-natural-muted text-xs gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading Supabase records...
+                  </div>
+                )}
                 {students.map((student) => {
                   const isSelected = student.id === selectedStudentId;
                   return (
@@ -755,12 +951,23 @@ export default function App() {
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center border-b border-natural-border pb-3">
                 <span className="text-xs font-bold text-natural-muted tracking-widest uppercase block">Design Template Defaults</span>
-                <button
-                  onClick={handleResetSettings}
-                  className="flex items-center gap-1 text-[10px] font-bold text-natural-muted hover:text-natural-darktext transition-colors uppercase tracking-wider"
-                >
-                  <RefreshCw className="w-3 h-3" /> Reset Mock
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => void handleSaveSettings()}
+                    disabled={isSavingConfig}
+                    className="flex items-center gap-1 text-[10px] font-bold text-natural-sage hover:text-natural-sage-hover disabled:opacity-50 transition-colors uppercase tracking-wider"
+                  >
+                    {isSavingConfig ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save Template
+                  </button>
+                  <button
+                    onClick={() => void handleResetSettings()}
+                    disabled={isSavingConfig}
+                    className="flex items-center gap-1 text-[10px] font-bold text-natural-muted hover:text-natural-darktext disabled:opacity-50 transition-colors uppercase tracking-wider"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Reset Mock
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col gap-3 text-xs">

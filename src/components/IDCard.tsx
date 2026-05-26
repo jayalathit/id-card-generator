@@ -26,6 +26,20 @@ interface IDCardProps {
   showBack?: boolean;
 }
 
+function verificationUrl(configuredUrl: string, idNumber: string): string {
+  const input = /^https?:\/\//i.test(configuredUrl.trim())
+    ? configuredUrl.trim()
+    : `https://${configuredUrl.trim()}`;
+
+  try {
+    const url = new URL(input);
+    url.searchParams.set('id', idNumber);
+    return url.toString();
+  } catch {
+    return `https://example.invalid/verify?id=${encodeURIComponent(idNumber)}`;
+  }
+}
+
 export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = false }) => {
   const [frontQrUrl, setFrontQrUrl] = useState<string>('');
   const [backQrUrl, setBackQrUrl] = useState<string>('');
@@ -55,7 +69,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
       .catch(err => console.error("Error generating front QR", err));
 
     // Back QR Code encodes the direct verification website url
-    const backData = `https://${config.backVerificationUrl.replace(/^(https?:\/\/)?(www\.)?/, '')}?id=${student.idNumber}`;
+    const backData = verificationUrl(config.backVerificationUrl, student.idNumber);
     QRCode.toDataURL(backData, {
       margin: 1,
       width: 200,
@@ -187,7 +201,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
                     VALIDITY
                   </span>
                   <p className="text-[10px] font-semibold text-slate-600 leading-normal mt-[3px]">
-                    This ID card is valid for <span className="text-[#0c2340] font-black uppercase">TWO (2) YEARS</span> from the date of certification.
+                    This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{config.validityYears} YEAR{config.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
                 </div>
               </div>
@@ -266,7 +280,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
       const infoRows = [
         { label: 'NIC NO.', value: student.nic || '199012345V', icon: Fingerprint },
         { label: 'NAME', value: student.name || 'JOHN PERERA', icon: User },
-        { label: 'ID NUMBER', value: student.idNumber || 'FI-2026-006', icon: Award },
+        { label: 'ID NUMBER', value: student.idNumber || 'FL-2026-006', icon: Award },
         { label: 'GRADE', value: student.grade || 'A', icon: ShieldCheck },
         { label: 'COURSE', value: student.course || (equipment_type === 'forklift' ? 'FORKLIFT OPERATOR CERTIFICATION' : 'BACKHOE LOADER CERTIFICATION'), icon: BookOpen },
         { label: 'ISSUE DATE', value: student.issueDate || '26/05/2026', icon: Calendar },
@@ -310,7 +324,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               </div>
               <div className="flex flex-col text-left pl-3.5">
                 <span className="font-sans font-extrabold text-[23px] text-[#0c2340] leading-none tracking-tight">
-                  JAYALATH
+                  {config.leftMainHeader || 'JAYALATH CAMPUS'}
                 </span>
                 <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
                   {config.leftSubHeader || "CAMPUS FOR CONSTRUCTION & INDUSTRIAL TRAINING CENTER"}
@@ -810,7 +824,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
                 STUDENT / TRAINEE ID NO.
               </span>
               <span className="text-[12.5px] font-black text-[#0c2340] font-mono border-b border-slate-100 pb-[3px] leading-tight select-all">
-                {String(student.idNumber || "FI-2026-006").toUpperCase()}
+                {String(student.idNumber || "FL-2026-006").toUpperCase()}
               </span>
             </div>
 
@@ -886,7 +900,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
         <div className="mt-4 flex items-end justify-between px-1 border-t border-slate-100 pt-2.5">
           <div className="text-left leading-none flex flex-col justify-end">
             <span className="text-[6.5px] font-black text-slate-400 tracking-widest uppercase block mb-1">
-              INSTRUCTOR SIGNATURE
+              TRAINEE SIGNATURE
             </span>
             <div className="w-[124px] h-[1px] border-b border-dashed border-slate-300" />
           </div>

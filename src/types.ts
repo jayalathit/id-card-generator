@@ -12,17 +12,20 @@ export interface Student {
   course: string;
   issueDate: string;
   trainingCenter: string;
-  photo?: string; // Data URL or placeholder
+  photo?: string; // Data URL while editing or signed Storage URL after loading
+  photoPath?: string; // Private Supabase Storage object path
   signatureType: 'handwritten' | 'typed' | 'uploaded';
   signatureText?: string; // If typed
-  signatureImage?: string; // If handwritten or uploaded (Data URL)
+  signatureImage?: string; // Data URL while editing or signed Storage URL after loading
+  signaturePath?: string; // Private Supabase Storage object path
   cardDesignation?: 'student' | 'operator'; // 'student' or 'operator'
   equipmentType?: 'forklift' | 'backhoe'; // 'forklift' or 'backhoe'
   equipmentClass?: string; // "Counterbalance Forklift / Class A" or "JCB Backhoe Loader / Class A"
 }
 
 export interface CardConfig {
-  institutionLogo?: string; // Custom header logo
+  institutionLogo?: string; // Signed Storage URL for a custom header logo
+  institutionLogoPath?: string; // Private Supabase Storage object path
   leftMainHeader: string; // "JAYALATH"
   leftSubHeader: string; // "CAMPUS FOR CONSTRUCTION & INDUSTRIAL TRAINING CENTER"
   rightMainHeader: string; // "GLOBAL SKILLS"
