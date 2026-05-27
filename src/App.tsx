@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Student, CardConfig, CanvasElement, TemplateSurface } from './types';
+import { Student, CardConfig, CanvasElement, TemplateDetails, TemplateSurface } from './types';
 import { IDCard } from './components/IDCard';
 import { SignaturePad } from './components/SignaturePad';
 import { downloadIDCardPDF } from './utils/pdfGenerator';
@@ -97,8 +97,7 @@ const INITIAL_STUDENTS: Student[] = [
   }
 ];
 
-const INITIAL_CONFIG: CardConfig = {
-  adminSignatureText: 'Admin Department',
+const DEFAULT_TEMPLATE_DETAILS: TemplateDetails = {
   leftMainHeader: 'JAYALATH CAMPUS',
   leftSubHeader: 'Career Education & Training Institute',
   rightMainHeader: 'OFFICIAL ID',
@@ -108,10 +107,17 @@ const INITIAL_CONFIG: CardConfig = {
   backAddress: 'Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka.',
   backContactPhone: '070 2 503 503',
   backContactEmail: '011 7 503 503',
-  backLogoLabel: 'JAYALATH CAMPUS',
+  backLogoLabel: 'JAYALATH CAMPUS'
+};
+
+const INITIAL_CONFIG: CardConfig = {
+  adminSignatureText: 'Admin Department',
+  ...DEFAULT_TEMPLATE_DETAILS,
   primaryColor: '#0c2340',
   accentColor: '#e2a812',
-  canvasElements: []
+  canvasElements: [],
+  studentDetails: { ...DEFAULT_TEMPLATE_DETAILS },
+  operatorDetails: { ...DEFAULT_TEMPLATE_DETAILS }
 };
 
 function errorMessage(error: unknown): string {
@@ -144,6 +150,7 @@ export default function App() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [viewMode, setViewMode] = useState<'both' | 'front' | 'back'>('both');
   const [editingSide, setEditingSide] = useState<'front' | 'back'>('front');
+  const [templateCardDesignation, setTemplateCardDesignation] = useState<'student' | 'operator'>('student');
   const [selectedCanvasLayer, setSelectedCanvasLayer] = useState<{ surface: TemplateSurface; id: string } | null>(null);
 
   // Form states
@@ -240,13 +247,33 @@ export default function App() {
     equipmentType: formEquipmentType,
     equipmentClass: formEquipmentClass
   } : (selectedStudent || INITIAL_STUDENTS[0]);
-  const editingSurface = surfaceFor(previewStudent.cardDesignation, editingSide === 'back');
+  const activePreviewStudent: Student = activeTab === 'config'
+    ? {
+        ...previewStudent,
+        id: `template-${templateCardDesignation}-preview`,
+        cardDesignation: templateCardDesignation,
+        grade: templateCardDesignation === 'operator' ? (previewStudent.grade || 'A') : '',
+        course: templateCardDesignation === 'operator'
+          ? (previewStudent.equipmentType === 'backhoe' ? 'Backhoe Loader Operator Certification' : 'Forklift Operator Certification')
+          : (previewStudent.equipmentType === 'backhoe' ? 'Backhoe Loader Operator Training' : 'Forklift Operator Training')
+      }
+    : previewStudent;
+  const activeTemplateDetails = templateCardDesignation === 'operator' ? config.operatorDetails : config.studentDetails;
+  const editingSurface = surfaceFor(activePreviewStudent.cardDesignation, editingSide === 'back');
   const editingLayers = visibleLayers(config.canvasElements, editingSurface);
   const activeCanvasLayer = selectedCanvasLayer?.surface === editingSurface
     ? editingLayers.find((layer) => layer.id === selectedCanvasLayer.id)
     : undefined;
-  const isOperatorPreview = previewStudent.cardDesignation === 'operator';
+  const isOperatorPreview = activePreviewStudent.cardDesignation === 'operator';
   const isExpandedPreview = isOperatorPreview && viewMode === 'both';
+
+  const updateActiveTemplateDetails = (changes: Partial<TemplateDetails>) => {
+    const key = templateCardDesignation === 'operator' ? 'operatorDetails' : 'studentDetails';
+    setConfig((previous) => ({
+      ...previous,
+      [key]: { ...previous[key], ...changes }
+    }));
+  };
 
   // Helper to start adding a student
   const handleAddNewClick = () => {
@@ -520,16 +547,16 @@ export default function App() {
 
   // PDF trigger
   const handleDownloadPdf = async (mode: 'exact' | 'a4_sheet') => {
-    if (!previewStudent) return;
+    if (!activePreviewStudent) return;
     setIsGeneratingPdf(true);
     // Give elements a tiny frame to settle and render QR codes
     setTimeout(async () => {
-      const isOperator = previewStudent.cardDesignation === 'operator';
+      const isOperator = activePreviewStudent.cardDesignation === 'operator';
       const success = await downloadIDCardPDF(
-        previewStudent.name,
-        previewStudent.idNumber,
-        `card-capture-front-${previewStudent.id}`,
-        `card-capture-back-${previewStudent.id}`,
+        activePreviewStudent.name,
+        activePreviewStudent.idNumber,
+        `card-capture-front-${activePreviewStudent.id}`,
+        `card-capture-back-${activePreviewStudent.id}`,
         mode,
         isOperator ? 'landscape' : 'portrait'
       );
@@ -1301,6 +1328,30 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-natural-darktext">Select ID To Customize</span>
+                <div className="grid grid-cols-2 gap-2 bg-natural-panel border border-natural-border p-1">
+                  {(['student', 'operator'] as const).map((designation) => (
+                    <button
+                      key={designation}
+                      type="button"
+                      onClick={() => {
+                        setTemplateCardDesignation(designation);
+                        setEditingSide('front');
+                        setViewMode('both');
+                        setSelectedCanvasLayer(null);
+                      }}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-wide ${templateCardDesignation === designation ? 'bg-natural-sage text-white' : 'text-natural-muted hover:text-natural-darktext'}`}
+                    >
+                      {designation} ID
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[9px] font-semibold text-natural-muted">
+                  Now editing {templateCardDesignation} ID layout and printed information.
+                </span>
+              </div>
+
               <div className="rounded-xl border border-natural-border bg-white p-3 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1472,6 +1523,7 @@ export default function App() {
                   </div>
                 </div>
 
+                {templateCardDesignation === 'student' && (
                 <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
                   <span className="font-bold text-[10.5px] text-natural-darktext uppercase tracking-wider">Admin Department Signature</span>
                   <span className="text-[9px] font-semibold text-natural-muted">Default authorized signature shown on student ID designs.</span>
@@ -1486,6 +1538,7 @@ export default function App() {
                     {config.adminSignatureText.trim() || 'Admin Department'}
                   </span>
                 </div>
+                )}
 
                 {/* Left Area header customizing text fields */}
                 <div className="flex flex-col gap-1">
@@ -1493,8 +1546,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.leftMainHeader}
-                    onChange={(e) => setConfig(prev => ({ ...prev, leftMainHeader: e.target.value }))}
+                    value={activeTemplateDetails.leftMainHeader}
+                    onChange={(e) => updateActiveTemplateDetails({ leftMainHeader: e.target.value })}
                   />
                 </div>
 
@@ -1503,8 +1556,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.leftSubHeader}
-                    onChange={(e) => setConfig(prev => ({ ...prev, leftSubHeader: e.target.value }))}
+                    value={activeTemplateDetails.leftSubHeader}
+                    onChange={(e) => updateActiveTemplateDetails({ leftSubHeader: e.target.value })}
                   />
                 </div>
 
@@ -1513,8 +1566,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.rightMainHeader}
-                    onChange={(e) => setConfig(prev => ({ ...prev, rightMainHeader: e.target.value }))}
+                    value={activeTemplateDetails.rightMainHeader}
+                    onChange={(e) => updateActiveTemplateDetails({ rightMainHeader: e.target.value })}
                   />
                 </div>
 
@@ -1523,8 +1576,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.rightSubHeader}
-                    onChange={(e) => setConfig(prev => ({ ...prev, rightSubHeader: e.target.value }))}
+                    value={activeTemplateDetails.rightSubHeader}
+                    onChange={(e) => updateActiveTemplateDetails({ rightSubHeader: e.target.value })}
                   />
                 </div>
 
@@ -1536,8 +1589,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.backLogoLabel}
-                    onChange={(e) => setConfig(prev => ({ ...prev, backLogoLabel: e.target.value }))}
+                    value={activeTemplateDetails.backLogoLabel}
+                    onChange={(e) => updateActiveTemplateDetails({ backLogoLabel: e.target.value })}
                   />
                 </div>
 
@@ -1546,8 +1599,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.backVerificationUrl}
-                    onChange={(e) => setConfig(prev => ({ ...prev, backVerificationUrl: e.target.value }))}
+                    value={activeTemplateDetails.backVerificationUrl}
+                    onChange={(e) => updateActiveTemplateDetails({ backVerificationUrl: e.target.value })}
                   />
                 </div>
 
@@ -1556,8 +1609,8 @@ export default function App() {
                   <input
                     type="number"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.validityYears}
-                    onChange={(e) => setConfig(prev => ({ ...prev, validityYears: parseInt(e.target.value) || 2 }))}
+                    value={activeTemplateDetails.validityYears}
+                    onChange={(e) => updateActiveTemplateDetails({ validityYears: parseInt(e.target.value) || 2 })}
                   />
                 </div>
 
@@ -1566,8 +1619,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.backContactPhone}
-                    onChange={(e) => setConfig(prev => ({ ...prev, backContactPhone: e.target.value }))}
+                    value={activeTemplateDetails.backContactPhone}
+                    onChange={(e) => updateActiveTemplateDetails({ backContactPhone: e.target.value })}
                   />
                 </div>
 
@@ -1576,8 +1629,8 @@ export default function App() {
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
-                    value={config.backContactEmail}
-                    onChange={(e) => setConfig(prev => ({ ...prev, backContactEmail: e.target.value }))}
+                    value={activeTemplateDetails.backContactEmail}
+                    onChange={(e) => updateActiveTemplateDetails({ backContactEmail: e.target.value })}
                   />
                 </div>
 
@@ -1586,8 +1639,8 @@ export default function App() {
                   <textarea
                     rows={3}
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage font-sans text-xs"
-                    value={config.backAddress}
-                    onChange={(e) => setConfig(prev => ({ ...prev, backAddress: e.target.value }))}
+                    value={activeTemplateDetails.backAddress}
+                    onChange={(e) => updateActiveTemplateDetails({ backAddress: e.target.value })}
                   />
                 </div>
               </div>
@@ -1639,7 +1692,7 @@ export default function App() {
                     <div className={`preview-card-frame ${isOperatorPreview ? 'preview-card-frame--operator' : 'preview-card-frame--student'}`}>
                       <div className="preview-card-paper bg-white p-2 border border-natural-border shadow-md">
                         <IDCard
-                          student={previewStudent}
+                          student={activePreviewStudent}
                           config={config}
                           showBack={false}
                           designMode={activeTab === 'config'}
@@ -1659,7 +1712,7 @@ export default function App() {
                     <div className={`preview-card-frame ${isOperatorPreview ? 'preview-card-frame--operator' : 'preview-card-frame--student'}`}>
                       <div className="preview-card-paper bg-white p-2 border border-natural-border shadow-md">
                         <IDCard
-                          student={previewStudent}
+                          student={activePreviewStudent}
                           config={config}
                           showBack={true}
                           designMode={activeTab === 'config'}
@@ -1698,7 +1751,7 @@ export default function App() {
                     <div className="flex flex-col">
                       <span className="font-extrabold text-xs text-natural-darktext uppercase tracking-wider block">ID Card Dimensions</span>
                       <span className="text-[9px] text-natural-sage mt-0.5 font-semibold block uppercase">
-                        {previewStudent.cardDesignation === 'operator' ? '85.6mm x 54mm (CR80 Landscape)' : '54mm x 85.6mm (CR80 Portrait)'}
+                        {activePreviewStudent.cardDesignation === 'operator' ? '85.6mm x 54mm (CR80 Landscape)' : '54mm x 85.6mm (CR80 Portrait)'}
                       </span>
                     </div>
                     <span className="text-[10px] text-natural-text mt-2 leading-relaxed font-semibold">
@@ -1765,25 +1818,25 @@ export default function App() {
         }}
       >
         <div 
-          id={`card-capture-front-${previewStudent.id}`}
+          id={`card-capture-front-${activePreviewStudent.id}`}
           style={{
-            width: previewStudent.cardDesignation === 'operator' ? '650px' : '410px',
-            height: previewStudent.cardDesignation === 'operator' ? '410px' : '650px',
+            width: activePreviewStudent.cardDesignation === 'operator' ? '650px' : '410px',
+            height: activePreviewStudent.cardDesignation === 'operator' ? '410px' : '650px',
             boxSizing: 'border-box'
           }}
         >
-          <IDCard student={previewStudent} config={config} showBack={false} />
+          <IDCard student={activePreviewStudent} config={config} showBack={false} />
         </div>
         <div 
-          id={`card-capture-back-${previewStudent.id}`} 
+          id={`card-capture-back-${activePreviewStudent.id}`}
           style={{
-            width: previewStudent.cardDesignation === 'operator' ? '650px' : '410px',
-            height: previewStudent.cardDesignation === 'operator' ? '410px' : '650px',
+            width: activePreviewStudent.cardDesignation === 'operator' ? '650px' : '410px',
+            height: activePreviewStudent.cardDesignation === 'operator' ? '410px' : '650px',
             boxSizing: 'border-box',
             marginTop: '32px'
           }}
         >
-          <IDCard student={previewStudent} config={config} showBack={true} />
+          <IDCard student={activePreviewStudent} config={config} showBack={true} />
         </div>
       </div>
     </div>

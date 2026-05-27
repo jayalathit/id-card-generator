@@ -47,6 +47,19 @@ export interface CanvasElement {
   borderColor?: string;
 }
 
+export interface TemplateDetails {
+  leftMainHeader: string;
+  leftSubHeader: string;
+  rightMainHeader: string;
+  rightSubHeader: string;
+  validityYears: number;
+  backVerificationUrl: string;
+  backAddress: string;
+  backContactPhone: string;
+  backContactEmail: string;
+  backLogoLabel: string;
+}
+
 export interface CardConfig {
   institutionLogo?: string; // Signed Storage URL for a custom header logo
   institutionLogoPath?: string; // Private Supabase Storage object path
@@ -65,4 +78,6 @@ export interface CardConfig {
   primaryColor: string;
   accentColor: string;
   canvasElements: CanvasElement[];
+  studentDetails: TemplateDetails;
+  operatorDetails: TemplateDetails;
 }

@@ -60,6 +60,7 @@ export const IDCard: React.FC<IDCardProps> = ({
 
   const card_designation = student.cardDesignation || 'student';
   const equipment_type = student.equipmentType || 'forklift';
+  const templateDetails = card_designation === 'operator' ? config.operatorDetails : config.studentDetails;
   const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
     ? 'Counterbalance Forklift / Class A'
     : 'JCB Backhoe Loader / Class A');
@@ -189,7 +190,7 @@ export const IDCard: React.FC<IDCardProps> = ({
   // Generate real dynamic QR codes when student data or URLs change
   useEffect(() => {
     // Back QR Code encodes the direct verification website url
-    const backData = verificationUrl(config.backVerificationUrl, student.idNumber);
+    const backData = verificationUrl(templateDetails.backVerificationUrl, student.idNumber);
     QRCode.toDataURL(backData, {
       margin: 1,
       width: 200,
@@ -200,7 +201,7 @@ export const IDCard: React.FC<IDCardProps> = ({
     })
       .then(url => setBackQrUrl(url))
       .catch(err => console.error("Error generating back QR", err));
-  }, [student, config.backVerificationUrl, card_designation, equipment_type]);
+  }, [student, templateDetails.backVerificationUrl, card_designation, equipment_type]);
 
   // A generic profile avatar placeholder SVG
   const AvatarPlaceholder = () => (
@@ -329,7 +330,7 @@ export const IDCard: React.FC<IDCardProps> = ({
                     VALIDITY
                   </span>
                   <p className="text-[10px] font-semibold text-slate-600 leading-normal mt-[3px]">
-                    This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{config.validityYears} YEAR{config.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
+                    This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{templateDetails.validityYears} YEAR{templateDetails.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
                 </div>
               </div>
@@ -356,7 +357,7 @@ export const IDCard: React.FC<IDCardProps> = ({
                     Website verification
                   </span>
                   <span className="text-[8px] font-extrabold text-[#e2a812] tracking-wide block break-all leading-snug select-all">
-                    {config.backVerificationUrl}
+                    {templateDetails.backVerificationUrl}
                   </span>
                 </div>
               </div>
@@ -370,7 +371,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               <MapPin size={12} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">ADDRESS</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{config.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."}</p>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{templateDetails.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."}</p>
               </div>
             </div>
             {/* Column 2 Contact */}
@@ -378,7 +379,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               <Phone size={11} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{config.backContactPhone || "070 2 503 503"}<br/>{config.backContactEmail || "011 7 503 503"}</p>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{templateDetails.backContactPhone || "070 2 503 503"}<br/>{templateDetails.backContactEmail || "011 7 503 503"}</p>
               </div>
             </div>
             {/* Column 3 Envelope */}
@@ -442,10 +443,10 @@ export const IDCard: React.FC<IDCardProps> = ({
               </div>
               <div className="flex flex-col text-left pl-3.5">
                 <span className="font-sans font-extrabold text-[23px] text-[#0c2340] leading-none tracking-tight">
-                  {config.leftMainHeader || 'JAYALATH CAMPUS'}
+                  {templateDetails.leftMainHeader || 'JAYALATH CAMPUS'}
                 </span>
                 <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
-                  {config.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
+                  {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
                 </span>
               </div>
             </div>
@@ -456,10 +457,10 @@ export const IDCard: React.FC<IDCardProps> = ({
             {/* Header right: INSTITUTION branding */}
             <div className="flex flex-col text-center pr-3 min-w-[120px]">
               <span className="font-sans font-black text-[16px] tracking-tight text-[#0c2340] leading-none uppercase">
-                {config.rightMainHeader || "OFFICIAL ID"}
+                {templateDetails.rightMainHeader || "OFFICIAL ID"}
               </span>
               <span className="text-[9px] font-bold text-[#e2a812] tracking-[0.15em] mt-1.5 leading-none uppercase">
-                {config.rightSubHeader || "CREDENTIAL"}
+                {templateDetails.rightSubHeader || "CREDENTIAL"}
               </span>
             </div>
           </div>
@@ -576,7 +577,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               Issued by Jayalath Campus
             </span>
             <span className="text-[7px] font-black uppercase tracking-[0.12em] text-[#0c2340]">
-              Verify: {config.backVerificationUrl}
+              Verify: {templateDetails.backVerificationUrl}
             </span>
           </div>
 
@@ -695,7 +696,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[9px] text-[#0c2340] font-black pl-4 uppercase">
-              Contact: {config.backContactPhone || "070 2 503 503"} <span className="text-gray-400 font-normal px-1">|</span> {config.backContactEmail || "011 7 503 503"}
+              Contact: {templateDetails.backContactPhone || "070 2 503 503"} <span className="text-gray-400 font-normal px-1">|</span> {templateDetails.backContactEmail || "011 7 503 503"}
             </p>
           </div>
 
@@ -728,7 +729,7 @@ export const IDCard: React.FC<IDCardProps> = ({
                     VERIFY AT:
                   </span>
                   <span className="text-[8px] font-extrabold text-white block leading-snug break-all mt-0.5 select-all">
-                    {config.backVerificationUrl}
+                    {templateDetails.backVerificationUrl}
                   </span>
                 </div>
               </div>
@@ -767,7 +768,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[8.5px] text-slate-500 font-semibold pl-4 leading-normal whitespace-pre-line tracking-tight uppercase">
-              {config.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka."}
+              {templateDetails.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka."}
             </p>
           </div>
 
@@ -826,10 +827,10 @@ export const IDCard: React.FC<IDCardProps> = ({
           {/* Institution Names Column */}
           <div className="flex-1 text-right pr-1">
             <span className="font-sans font-black text-[22px] tracking-tight text-white block uppercase leading-none text-right">
-              {config.leftMainHeader || "JAYALATH CAMPUS"}
+              {templateDetails.leftMainHeader || "JAYALATH CAMPUS"}
             </span>
             <span className="font-sans font-extrabold text-[7.5px] text-[#e2a812] uppercase tracking-wide block mt-[3px] leading-tight text-right">
-              {config.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
+              {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
             </span>
           </div>
         </div>

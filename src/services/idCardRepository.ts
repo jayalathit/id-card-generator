@@ -1,8 +1,10 @@
 import { ASSET_BUCKET, supabase } from '../lib/supabase';
-import { CanvasElement, CardConfig, Student } from '../types';
+import { CanvasElement, CardConfig, Student, TemplateDetails } from '../types';
 
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 const ADMIN_SIGNATURE_SETTING_ID = '__template_admin_signature__';
+const STUDENT_DETAILS_SETTING_ID = '__template_student_details__';
+const OPERATOR_DETAILS_SETTING_ID = '__template_operator_details__';
 
 interface StudentRow {
   id: string;
@@ -51,32 +53,73 @@ function rectangularElements(elements: CanvasElement[] | null | undefined): Canv
 }
 
 function editableCanvasElements(elements: CanvasElement[] | null | undefined): CanvasElement[] {
-  return rectangularElements(elements).filter((element) => element.id !== ADMIN_SIGNATURE_SETTING_ID);
+  return rectangularElements(elements).filter((element) => ![
+    ADMIN_SIGNATURE_SETTING_ID,
+    STUDENT_DETAILS_SETTING_ID,
+    OPERATOR_DETAILS_SETTING_ID
+  ].includes(element.id));
+}
+
+function settingsElement(id: string, text: string): CanvasElement {
+  return {
+    id,
+    surface: 'student-front',
+    name: 'Template setting',
+    kind: 'text',
+    x: 0,
+    y: 0,
+    rotation: 0,
+    scale: 1,
+    opacity: 0,
+    zIndex: -1,
+    hidden: true,
+    text
+  };
 }
 
 function storedCanvasElements(config: CardConfig): CanvasElement[] {
   return [
     ...editableCanvasElements(config.canvasElements),
-    {
-      id: ADMIN_SIGNATURE_SETTING_ID,
-      surface: 'student-front',
-      name: 'Admin signature setting',
-      kind: 'text',
-      x: 0,
-      y: 0,
-      rotation: 0,
-      scale: 1,
-      opacity: 0,
-      zIndex: -1,
-      hidden: true,
-      text: config.adminSignatureText.trim() || 'Admin Department'
-    }
+    settingsElement(ADMIN_SIGNATURE_SETTING_ID, config.adminSignatureText.trim() || 'Admin Department'),
+    settingsElement(STUDENT_DETAILS_SETTING_ID, JSON.stringify(config.studentDetails)),
+    settingsElement(OPERATOR_DETAILS_SETTING_ID, JSON.stringify(config.operatorDetails))
   ];
 }
 
 function configuredAdminSignature(row: ConfigRow): string {
   const storedSetting = row.canvas_elements?.find((element) => element.id === ADMIN_SIGNATURE_SETTING_ID)?.text;
   return row.admin_signature_text?.trim() || storedSetting?.trim() || 'Admin Department';
+}
+
+function legacyDetails(row: ConfigRow): TemplateDetails {
+  return {
+    leftMainHeader: row.left_main_header,
+    leftSubHeader: row.left_sub_header === 'for Construction & Industrial Training'
+      ? 'Career Education & Training Institute'
+      : row.left_sub_header,
+    rightMainHeader: row.right_main_header === 'GLOBAL SKILLS' ? 'OFFICIAL ID' : row.right_main_header,
+    rightSubHeader: row.right_sub_header === 'INSTITUTE' ? 'CREDENTIAL' : row.right_sub_header,
+    validityYears: row.validity_years,
+    backVerificationUrl: row.back_verification_url === 'www.jayalathcampus.lk/verify'
+      ? 'jceti.com/verification'
+      : row.back_verification_url,
+    backAddress: row.back_address.includes('for Construction & Industrial Training')
+      ? row.back_address.replace('Jayalath Campus for Construction & Industrial Training', 'Jayalath Campus').replace('Industrial Training Road', 'Training Road')
+      : row.back_address,
+    backContactPhone: row.back_contact_phone === '+94 11 2 345 678' ? '070 2 503 503' : row.back_contact_phone,
+    backContactEmail: row.back_contact_email === '+94 77 123 4567' ? '011 7 503 503' : row.back_contact_email,
+    backLogoLabel: row.back_logo_label
+  };
+}
+
+function storedDetails(row: ConfigRow, id: string, fallback: TemplateDetails): TemplateDetails {
+  const serialized = row.canvas_elements?.find((element) => element.id === id)?.text;
+  if (!serialized) return fallback;
+  try {
+    return { ...fallback, ...(JSON.parse(serialized) as Partial<TemplateDetails>) };
+  } catch {
+    return fallback;
+  }
 }
 
 function toDisplayDate(date: string): string {
@@ -129,29 +172,19 @@ async function hydrateStudent(row: StudentRow): Promise<Student> {
 }
 
 async function hydrateConfig(row: ConfigRow): Promise<CardConfig> {
+  const legacy = legacyDetails(row);
+  const studentDetails = storedDetails(row, STUDENT_DETAILS_SETTING_ID, legacy);
+  const operatorDetails = storedDetails(row, OPERATOR_DETAILS_SETTING_ID, legacy);
   return {
     institutionLogo: await signedAssetUrl(row.institution_logo_path),
     institutionLogoPath: row.institution_logo_path || undefined,
     adminSignatureText: configuredAdminSignature(row),
-    leftMainHeader: row.left_main_header,
-    leftSubHeader: row.left_sub_header === 'for Construction & Industrial Training'
-      ? 'Career Education & Training Institute'
-      : row.left_sub_header,
-    rightMainHeader: row.right_main_header === 'GLOBAL SKILLS' ? 'OFFICIAL ID' : row.right_main_header,
-    rightSubHeader: row.right_sub_header === 'INSTITUTE' ? 'CREDENTIAL' : row.right_sub_header,
-    validityYears: row.validity_years,
-    backVerificationUrl: row.back_verification_url === 'www.jayalathcampus.lk/verify'
-      ? 'jceti.com/verification'
-      : row.back_verification_url,
-    backAddress: row.back_address.includes('for Construction & Industrial Training')
-      ? row.back_address.replace('Jayalath Campus for Construction & Industrial Training', 'Jayalath Campus').replace('Industrial Training Road', 'Training Road')
-      : row.back_address,
-    backContactPhone: row.back_contact_phone === '+94 11 2 345 678' ? '070 2 503 503' : row.back_contact_phone,
-    backContactEmail: row.back_contact_email === '+94 77 123 4567' ? '011 7 503 503' : row.back_contact_email,
-    backLogoLabel: row.back_logo_label,
+    ...studentDetails,
     primaryColor: row.primary_color || '#0c2340',
     accentColor: row.accent_color || '#e2a812',
-    canvasElements: editableCanvasElements(row.canvas_elements)
+    canvasElements: editableCanvasElements(row.canvas_elements),
+    studentDetails,
+    operatorDetails
   };
 }
 
@@ -314,16 +347,16 @@ export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {
     id: 1,
     institution_logo_path: institutionLogoPath,
     admin_signature_text: config.adminSignatureText.trim() || 'Admin Department',
-    left_main_header: config.leftMainHeader,
-    left_sub_header: config.leftSubHeader,
-    right_main_header: config.rightMainHeader,
-    right_sub_header: config.rightSubHeader,
-    validity_years: config.validityYears,
-    back_verification_url: config.backVerificationUrl,
-    back_address: config.backAddress,
-    back_contact_phone: config.backContactPhone,
-    back_contact_email: config.backContactEmail,
-    back_logo_label: config.backLogoLabel,
+    left_main_header: config.studentDetails.leftMainHeader,
+    left_sub_header: config.studentDetails.leftSubHeader,
+    right_main_header: config.studentDetails.rightMainHeader,
+    right_sub_header: config.studentDetails.rightSubHeader,
+    validity_years: config.studentDetails.validityYears,
+    back_verification_url: config.studentDetails.backVerificationUrl,
+    back_address: config.studentDetails.backAddress,
+    back_contact_phone: config.studentDetails.backContactPhone,
+    back_contact_email: config.studentDetails.backContactEmail,
+    back_logo_label: config.studentDetails.backLogoLabel,
     primary_color: config.primaryColor,
     accent_color: config.accentColor,
     canvas_elements: storedCanvasElements(config)
