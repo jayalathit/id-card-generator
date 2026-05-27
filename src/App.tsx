@@ -4,27 +4,58 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Student, CardConfig } from './types';
+import { Student, CardConfig, CanvasElement, TemplateSurface } from './types';
 import { IDCard } from './components/IDCard';
 import { SignaturePad } from './components/SignaturePad';
 import { downloadIDCardPDF } from './utils/pdfGenerator';
 import { deleteStudent, loadWorkspaceData, saveCardConfig, saveStudent } from './services/idCardRepository';
 import { supabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save } from 'lucide-react';
+import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
+import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
+
+type TrainingMethod = 'FC' | 'TT' | 'GAP';
+
+function specialtyCode(equipmentType: 'forklift' | 'backhoe'): string {
+  return equipmentType === 'forklift' ? 'FL' : 'BL';
+}
+
+function generatedCredentialId(
+  mainField: string,
+  equipmentType: 'forklift' | 'backhoe',
+  method: TrainingMethod,
+  year: string,
+  serial: string
+): string {
+  return `${mainField}/${specialtyCode(equipmentType)}/${method}/${year}/${serial}`;
+}
+
+function parseCredentialId(idNumber: string): { mainField: string; method: TrainingMethod; year: string; serial: string } {
+  const match = idNumber.match(/^([A-Z]+)\/(?:FL|BL)\/(FC|TT|GAP)\/(\d{4})\/(\d{6})$/i);
+  if (match) {
+    return { mainField: match[1].toUpperCase(), method: match[2].toUpperCase() as TrainingMethod, year: match[3], serial: match[4] };
+  }
+  const legacy = idNumber.match(/(?:^|\D)(\d{4})(?:\D+)(\d{1,6})$/);
+  return {
+    mainField: 'HMA',
+    method: 'FC',
+    year: legacy?.[1] || '2026',
+    serial: (legacy?.[2] || '1').padStart(6, '0')
+  };
+}
 
 const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-1',
     nic: '123456789V',
     name: 'John Perera',
-    idNumber: 'FL-2026-001',
-    grade: 'A',
+    idNumber: 'HMA/FL/FC/2026/000001',
+    grade: '',
     course: 'Forklift Operator Training',
     issueDate: '25/05/2026',
-    trainingCenter: 'Global Skills Institute',
+    trainingCenter: 'Jayalath Campus',
     signatureType: 'typed',
-    signatureText: 'John Perera',
+    signatureText: 'Admin Department',
     cardDesignation: 'student',
     equipmentType: 'forklift',
     equipmentClass: 'Counterbalance Forklift / Class A'
@@ -33,13 +64,13 @@ const INITIAL_STUDENTS: Student[] = [
     id: 'student-2',
     nic: '199524589V',
     name: 'Sanduni Jayasekara',
-    idNumber: 'BL-2026-002',
-    grade: 'A',
+    idNumber: 'HMA/BL/FC/2026/000002',
+    grade: '',
     course: 'Backhoe Loader Operator Training',
     issueDate: '26/05/2026',
-    trainingCenter: 'Global Skills Institute',
+    trainingCenter: 'Jayalath Campus',
     signatureType: 'typed',
-    signatureText: 'S. Jayasekara',
+    signatureText: 'Admin Department',
     cardDesignation: 'student',
     equipmentType: 'backhoe',
     equipmentClass: 'JCB Backhoe Loader / Class A'
@@ -48,13 +79,13 @@ const INITIAL_STUDENTS: Student[] = [
     id: 'student-3',
     nic: '198948123V',
     name: 'Chamara Silva',
-    idNumber: 'FL-26-OP-01',
+    idNumber: 'HMA/FL/TT/2026/000003',
     grade: 'B',
     course: 'Forklift Operator Certification',
     issueDate: '24/05/2026',
-    trainingCenter: 'Global Skills Institute',
+    trainingCenter: 'Jayalath Campus',
     signatureType: 'typed',
-    signatureText: 'C. Silva',
+    signatureText: 'Admin Department',
     cardDesignation: 'operator',
     equipmentType: 'forklift',
     equipmentClass: 'Counterbalance Forklift / Class A'
@@ -62,16 +93,20 @@ const INITIAL_STUDENTS: Student[] = [
 ];
 
 const INITIAL_CONFIG: CardConfig = {
+  adminSignatureText: 'Admin Department',
   leftMainHeader: 'JAYALATH CAMPUS',
-  leftSubHeader: 'for Construction & Industrial Training',
-  rightMainHeader: 'GLOBAL SKILLS',
-  rightSubHeader: 'INSTITUTE',
+  leftSubHeader: 'Career Education & Training Institute',
+  rightMainHeader: 'OFFICIAL ID',
+  rightSubHeader: 'CREDENTIAL',
   validityYears: 2,
-  backVerificationUrl: 'www.jayalathcampus.lk/verify',
-  backAddress: 'Jayalath Campus for Construction & Industrial Training\nNo. 123, Industrial Training Road,\nKandana, Western Province, Sri Lanka.',
-  backContactPhone: '+94 11 2 345 678',
-  backContactEmail: '+94 77 123 4567',
-  backLogoLabel: 'JAYALATH CAMPUS'
+  backVerificationUrl: 'jceti.com/verification',
+  backAddress: 'Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka.',
+  backContactPhone: '070 2 503 503',
+  backContactEmail: '011 7 503 503',
+  backLogoLabel: 'JAYALATH CAMPUS',
+  primaryColor: '#0c2340',
+  accentColor: '#e2a812',
+  canvasElements: []
 };
 
 function errorMessage(error: unknown): string {
@@ -103,15 +138,16 @@ export default function App() {
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [viewMode, setViewMode] = useState<'both' | 'front' | 'back'>('both');
+  const [editingSide, setEditingSide] = useState<'front' | 'back'>('front');
+  const [selectedCanvasLayer, setSelectedCanvasLayer] = useState<{ surface: TemplateSurface; id: string } | null>(null);
 
   // Form states
   const [formNic, setFormNic] = useState('');
   const [formName, setFormName] = useState('');
-  const [formIdNumber, setFormIdNumber] = useState('');
   const [formGrade, setFormGrade] = useState('A');
   const [formCourse, setFormCourse] = useState('Forklift Operator Training');
   const [formIssueDate, setFormIssueDate] = useState('25/05/2026');
-  const [formTrainingCenter, setFormTrainingCenter] = useState('Global Skills Institute');
+  const [formTrainingCenter, setFormTrainingCenter] = useState('Jayalath Campus');
   const [formPhoto, setFormPhoto] = useState<string | undefined>(undefined);
   const [formPhotoPath, setFormPhotoPath] = useState<string | undefined>(undefined);
   const [formSigType, setFormSigType] = useState<'handwritten' | 'typed' | 'uploaded'>('typed');
@@ -123,6 +159,13 @@ export default function App() {
   const [formCardDesignation, setFormCardDesignation] = useState<'student' | 'operator'>('student');
   const [formEquipmentType, setFormEquipmentType] = useState<'forklift' | 'backhoe'>('forklift');
   const [formEquipmentClass, setFormEquipmentClass] = useState('Counterbalance Forklift / Class A');
+  const [formMainField, setFormMainField] = useState('HMA');
+  const [formTrainingMethod, setFormTrainingMethod] = useState<TrainingMethod>('FC');
+  const [formIdYear, setFormIdYear] = useState('2026');
+  const [formSerial, setFormSerial] = useState('000001');
+  const [formStudentLookupId, setFormStudentLookupId] = useState('');
+  const [operatorLookupMessage, setOperatorLookupMessage] = useState('');
+  const [linkedStudentId, setLinkedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -169,42 +212,61 @@ export default function App() {
   }, [session]);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId) || students[0];
+  const generatedIdNumber = generatedCredentialId(formMainField, formEquipmentType, formTrainingMethod, formIdYear, formSerial);
 
   const previewStudent: Student = isEditing ? {
     id: editingStudentId || 'student-preview',
     nic: formNic || '199012345V',
     name: formName || 'John Perera',
-    idNumber: formIdNumber || 'FL-2026-001',
-    grade: formGrade || 'A',
+    idNumber: generatedIdNumber,
+    grade: formCardDesignation === 'operator' ? (formGrade || 'A') : '',
     course: formCourse || 'Forklift Operator Training',
     issueDate: formIssueDate || '25/05/2026',
-    trainingCenter: formTrainingCenter || 'Global Skills Institute',
+    trainingCenter: formTrainingCenter || 'Jayalath Campus',
     photo: formPhoto,
     photoPath: formPhotoPath,
-    signatureType: formSigType,
-    signatureText: formSigType === 'typed' ? (formSigText || formName || 'John Perera') : undefined,
-    signatureImage: formSigType !== 'typed' ? formSigImg : undefined,
+    signatureType: formCardDesignation === 'student' ? 'typed' : formSigType,
+    signatureText: formCardDesignation === 'student'
+      ? (config.adminSignatureText.trim() || 'Admin Department')
+      : (formSigType === 'typed' ? (formSigText || 'Admin Department') : undefined),
+    signatureImage: formCardDesignation === 'operator' && formSigType !== 'typed' ? formSigImg : undefined,
     signaturePath: formSigPath,
     cardDesignation: formCardDesignation,
     equipmentType: formEquipmentType,
     equipmentClass: formEquipmentClass
   } : (selectedStudent || INITIAL_STUDENTS[0]);
+  const editingSurface = surfaceFor(previewStudent.cardDesignation, editingSide === 'back');
+  const editingLayers = visibleLayers(config.canvasElements, editingSurface);
+  const activeCanvasLayer = selectedCanvasLayer?.surface === editingSurface
+    ? editingLayers.find((layer) => layer.id === selectedCanvasLayer.id)
+    : undefined;
+  const isOperatorPreview = previewStudent.cardDesignation === 'operator';
+  const isExpandedPreview = isOperatorPreview && viewMode === 'both';
 
   // Helper to start adding a student
   const handleAddNewClick = () => {
     setEditingStudentId(null);
     setIsEditing(true);
     // Auto-generate realistic next ID code
-    const count = students.length + 1;
-    const paddedNum = String(count).padStart(3, '0');
+    const highestSerial = students.reduce((max, student) => {
+      const match = student.idNumber.match(/\/(\d{6})$/);
+      return Math.max(max, match ? Number(match[1]) : 0);
+    }, students.length);
+    const paddedNum = String(highestSerial + 1).padStart(6, '0');
     
     setFormNic('');
     setFormName('');
+    setFormStudentLookupId('');
+    setOperatorLookupMessage('');
+    setLinkedStudentId(null);
     
     // Default form configuration as student & forklift
     setFormCardDesignation('student');
     setFormEquipmentType('forklift');
-    setFormIdNumber(`FL-2026-${paddedNum}`);
+    setFormMainField('HMA');
+    setFormTrainingMethod('FC');
+    setFormIdYear(String(new Date().getFullYear()));
+    setFormSerial(paddedNum);
     setFormGrade('A');
     setFormCourse('Forklift Operator Training');
     setFormEquipmentClass('Counterbalance Forklift / Class A');
@@ -214,11 +276,11 @@ export default function App() {
     const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
     setFormIssueDate(formattedDate);
     
-    setFormTrainingCenter('Global Skills Institute');
+    setFormTrainingCenter('Jayalath Campus');
     setFormPhoto(undefined);
     setFormPhotoPath(undefined);
     setFormSigType('typed');
-    setFormSigText('');
+    setFormSigText(config.adminSignatureText.trim() || 'Admin Department');
     setFormSigImg(undefined);
     setFormSigPath(undefined);
   };
@@ -230,7 +292,9 @@ export default function App() {
     
     setFormNic(student.nic);
     setFormName(student.name);
-    setFormIdNumber(student.idNumber);
+    setFormStudentLookupId('');
+    setOperatorLookupMessage('');
+    setLinkedStudentId(null);
     setFormGrade(student.grade);
     setFormCourse(student.course);
     setFormIssueDate(student.issueDate);
@@ -238,7 +302,7 @@ export default function App() {
     setFormPhoto(student.photo);
     setFormPhotoPath(student.photoPath);
     setFormSigType(student.signatureType);
-    setFormSigText(student.signatureText || '');
+    setFormSigText(student.signatureText || 'Admin Department');
     setFormSigImg(student.signatureImage);
     setFormSigPath(student.signaturePath);
 
@@ -246,6 +310,53 @@ export default function App() {
     setFormCardDesignation(student.cardDesignation || 'student');
     setFormEquipmentType(student.equipmentType || 'forklift');
     setFormEquipmentClass(student.equipmentClass || (student.equipmentType === 'backhoe' ? 'JCB Backhoe Loader / Class A' : 'Counterbalance Forklift / Class A'));
+    const parsedId = parseCredentialId(student.idNumber);
+    setFormMainField(parsedId.mainField);
+    setFormTrainingMethod(parsedId.method);
+    setFormIdYear(parsedId.year);
+    setFormSerial(parsedId.serial);
+  };
+
+  const checkFormerStudentRecord = (nicValue = formNic) => {
+    const normalizedNic = nicValue.trim().toLowerCase();
+    if (!normalizedNic) {
+      setLinkedStudentId(null);
+      setOperatorLookupMessage('Enter the NIC number first to check for an existing trainee record.');
+      return;
+    }
+
+    const formerStudent = students.find((student) => (
+      student.cardDesignation !== 'operator'
+      && student.nic.trim().toLowerCase() === normalizedNic
+    ));
+    if (!formerStudent) {
+      setLinkedStudentId(null);
+      setOperatorLookupMessage('No trainee record found for this NIC. Continue by entering the operator details manually.');
+      return;
+    }
+
+    if (
+      formStudentLookupId.trim()
+      && formStudentLookupId.trim().toLowerCase() !== formerStudent.idNumber.trim().toLowerCase()
+    ) {
+      setLinkedStudentId(null);
+      setOperatorLookupMessage('NIC found, but the student ID entered does not match the trainee record. Please check it again.');
+      return;
+    }
+
+    const parsedStudentId = parseCredentialId(formerStudent.idNumber);
+    const operatorEquipmentType = formerStudent.equipmentType || 'forklift';
+    setLinkedStudentId(formerStudent.id);
+    setFormStudentLookupId(formerStudent.idNumber);
+    setFormName(formerStudent.name);
+    setFormEquipmentType(operatorEquipmentType);
+    setFormEquipmentClass(formerStudent.equipmentClass || (operatorEquipmentType === 'backhoe' ? 'JCB Backhoe Loader / Class A' : 'Counterbalance Forklift / Class A'));
+    setFormMainField(parsedStudentId.mainField);
+    setFormTrainingCenter(formerStudent.trainingCenter);
+    setFormPhoto(formerStudent.photo);
+    setFormPhotoPath(formerStudent.photoPath);
+    setFormCourse(operatorEquipmentType === 'forklift' ? 'Forklift Operator Certification' : 'Backhoe Loader Operator Certification');
+    setOperatorLookupMessage(`Verified trainee record: ${formerStudent.idNumber}. The operator form has been auto-filled.`);
   };
 
   // Handle Photo upload callback
@@ -282,23 +393,57 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  const handleInstitutionLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      alert('Please choose a PNG, JPG, or WebP logo smaller than 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setConfig((previous) => ({ ...previous, institutionLogo: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Save Operator Record
   const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formNic.trim() || !formIdNumber.trim()) {
+    if (!formName.trim() || !formNic.trim() || !generatedIdNumber.trim()) {
       alert('Please fill out Name, NIC, and ID Number.');
+      return;
+    }
+    if (!/^\d{4}$/.test(formIdYear)) {
+      alert('Please enter a four-digit issuing year.');
       return;
     }
 
     const normalizedNic = formNic.trim().toLowerCase();
-    const normalizedIdNumber = formIdNumber.trim().toLowerCase();
-    const duplicate = students.find((student) => (
+    const normalizedIdNumber = generatedIdNumber.trim().toLowerCase();
+    const matchingTrainee = formCardDesignation === 'operator'
+      ? students.find((student) => (
+        student.cardDesignation !== 'operator'
+        && student.nic.trim().toLowerCase() === normalizedNic
+      ))
+      : undefined;
+    if (matchingTrainee && linkedStudentId !== matchingTrainee.id) {
+      alert('This NIC belongs to an existing trainee. Please confirm the Student ID using Check Trainee Record before issuing an operator card.');
+      return;
+    }
+    const duplicateId = students.find((student) => (
       student.id !== editingStudentId
-      && (student.nic.trim().toLowerCase() === normalizedNic
-        || student.idNumber.trim().toLowerCase() === normalizedIdNumber)
+      && student.idNumber.trim().toLowerCase() === normalizedIdNumber
     ));
-    if (duplicate) {
-      alert('NIC Number and ID/Cert Number must be unique for every card.');
+    const duplicateCategoryNic = students.find((student) => (
+      student.id !== editingStudentId
+      && (student.cardDesignation || 'student') === formCardDesignation
+      && student.nic.trim().toLowerCase() === normalizedNic
+    ));
+    if (duplicateId || duplicateCategoryNic) {
+      alert('Issued ID numbers must be unique, and a NIC may only have one card in each category.');
       return;
     }
 
@@ -306,16 +451,18 @@ export default function App() {
       id: editingStudentId || `student-${Date.now()}`,
       nic: formNic,
       name: formName,
-      idNumber: formIdNumber,
-      grade: formGrade,
+      idNumber: generatedIdNumber,
+      grade: formCardDesignation === 'operator' ? formGrade : '',
       course: formCourse,
       issueDate: formIssueDate,
       trainingCenter: formTrainingCenter,
       photo: formPhoto,
       photoPath: formPhotoPath,
-      signatureType: formSigType,
-      signatureText: formSigType === 'typed' ? (formSigText || formName) : undefined,
-      signatureImage: formSigType !== 'typed' ? formSigImg : undefined,
+      signatureType: formCardDesignation === 'student' ? 'typed' : formSigType,
+      signatureText: formCardDesignation === 'student'
+        ? (config.adminSignatureText.trim() || 'Admin Department')
+        : (formSigType === 'typed' ? (formSigText || 'Admin Department') : undefined),
+      signatureImage: formCardDesignation === 'operator' && formSigType !== 'typed' ? formSigImg : undefined,
       signaturePath: formSigPath,
       cardDesignation: formCardDesignation,
       equipmentType: formEquipmentType,
@@ -407,9 +554,69 @@ export default function App() {
 
   const handleResetSettings = async () => {
     if (confirm('Reset custom layouts to match default company mockups?')) {
-      setConfig(INITIAL_CONFIG);
-      await handleSaveSettings(INITIAL_CONFIG);
+      const resetConfig = { ...INITIAL_CONFIG, institutionLogoPath: config.institutionLogoPath };
+      setConfig(resetConfig);
+      setSelectedCanvasLayer(null);
+      await handleSaveSettings(resetConfig);
     }
+  };
+
+  const handleSelectCanvasLayer = (surface: TemplateSurface, id: string) => {
+    setEditingSide(surface.endsWith('back') ? 'back' : 'front');
+    setSelectedCanvasLayer({ surface, id });
+  };
+
+  const handleChangeCanvasLayer = (surface: TemplateSurface, id: string, changes: Partial<CanvasElement>) => {
+    setConfig((previous) => {
+      const layer = visibleLayers(previous.canvasElements, surface).find((candidate) => candidate.id === id);
+      if (!layer) return previous;
+      const updated = { ...layer, ...changes };
+      return {
+        ...previous,
+        canvasElements: [
+          ...previous.canvasElements.filter((candidate) => !(candidate.surface === surface && candidate.id === id)),
+          updated
+        ]
+      };
+    });
+  };
+
+  const handleAddCanvasElement = (kind: 'text' | 'rectangle') => {
+    const id = `${kind}-${Date.now()}`;
+    const element: CanvasElement = {
+      ...baseCanvasElement(editingSurface, id, kind === 'text' ? 'Custom text' : `Custom ${kind}`, kind),
+      x: 70,
+      y: 150,
+      width: kind === 'text' ? 220 : 90,
+      height: 45,
+      text: kind === 'text' ? 'NEW TEXT' : undefined,
+      fontSize: 18,
+      color: config.primaryColor,
+      fill: config.accentColor,
+      borderColor: config.accentColor,
+      zIndex: 30
+    };
+    setConfig((previous) => ({ ...previous, canvasElements: [...previous.canvasElements, element] }));
+    setSelectedCanvasLayer({ surface: editingSurface, id });
+  };
+
+  const handleDeleteCanvasElement = () => {
+    if (!activeCanvasLayer || activeCanvasLayer.kind === 'builtin') return;
+    setConfig((previous) => ({
+      ...previous,
+      canvasElements: previous.canvasElements.filter((element) => (
+        !(element.surface === editingSurface && element.id === activeCanvasLayer.id)
+      ))
+    }));
+    setSelectedCanvasLayer(null);
+  };
+
+  const handleResetCurrentSurface = () => {
+    setConfig((previous) => ({
+      ...previous,
+      canvasElements: previous.canvasElements.filter((element) => element.surface !== editingSurface)
+    }));
+    setSelectedCanvasLayer(null);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -483,8 +690,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-natural-cream text-natural-text flex flex-col font-sans select-none antialiased">
       {/* Top Professional Navigation Header */}
-      <header className="bg-white border-b border-natural-border py-4 px-6 relative z-30 shadow-sm flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-natural-border py-3 px-4 sm:py-4 sm:px-6 relative z-30 shadow-sm flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="w-10 h-10 bg-natural-sage rounded-xl flex items-center justify-center text-white">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 100 100">
               <path d="M10 65 h40 l10 -15 h15 v12 h-10 v15 h-55 z" />
@@ -496,29 +703,29 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <h1 className="text-lg font-display font-bold tracking-wide text-natural-darktext uppercase leading-none">
-              Forklift Operator ID System
+            <h1 className="text-base sm:text-lg font-display font-bold tracking-wide text-natural-darktext uppercase leading-none">
+              Jayalath Campus ID System
             </h1>
             <p className="text-[10px] text-natural-muted font-semibold uppercase tracking-wider block mt-1">
-              Global Skills Institute • ID Card Production Hub
+              Career Education &amp; Training Institute | ID Card Production Hub
             </p>
           </div>
         </div>
 
         {/* Global Control Stats */}
-        <div className="flex gap-4 items-center">
-          <div className="bg-natural-panel border border-natural-border px-4 py-1.5 rounded-lg flex flex-col">
+        <div className="flex flex-wrap gap-2 sm:gap-4 items-center justify-between sm:justify-end w-full sm:w-auto">
+          <div className="bg-natural-panel border border-natural-border px-3 sm:px-4 py-1.5 rounded-lg flex flex-col">
             <span className="text-[9px] font-bold text-natural-muted uppercase tracking-widest leading-none">OPERATORS</span>
             <span className="text-sm font-black text-natural-sage block mt-0.5">{students.length} Total</span>
           </div>
 
-          <div className="flex bg-natural-panel border border-natural-border p-1 rounded-lg">
+          <div className="order-first sm:order-none flex bg-natural-panel border border-natural-border p-1 rounded-lg">
             <button
               onClick={() => setActiveTab('students')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-all ${activeTab === 'students' ? 'bg-natural-sage text-white' : 'text-natural-muted hover:text-natural-darktext'}`}
             >
               <Users className="w-3.5 h-3.5" />
-              Operators
+              IDs
             </button>
             <button
               onClick={() => setActiveTab('config')}
@@ -534,7 +741,7 @@ export default function App() {
           </div>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 border border-natural-border bg-natural-panel hover:bg-natural-sand rounded-lg px-3 py-2 text-[10px] font-bold uppercase text-natural-muted"
+            className="flex items-center gap-1.5 border border-natural-border bg-natural-panel hover:bg-natural-sand rounded-lg px-2.5 sm:px-3 py-2 text-[10px] font-bold uppercase text-natural-muted"
           >
             <LogOut className="w-3.5 h-3.5" /> Sign Out
           </button>
@@ -548,15 +755,15 @@ export default function App() {
       )}
 
       {/* Main Area Split */}
-      <main className="flex-1 grid grid-cols-12 overflow-hidden h-full">
+      <main className="flex-1 grid grid-cols-12 overflow-visible lg:overflow-hidden lg:h-full">
         {/* SIDE BAR / LEFT PANEL - CONTROLS & SELECTION */}
-        <section className="col-span-12 lg:col-span-4 bg-natural-panel border-r border-natural-border p-6 flex flex-col h-full overflow-y-auto min-h-[500px] lg:min-h-[auto]">
+        <section className="order-2 lg:order-1 col-span-12 lg:col-span-4 xl:col-span-3 bg-natural-panel border-r border-natural-border p-4 sm:p-6 flex flex-col h-auto lg:h-full overflow-y-visible lg:overflow-y-auto min-h-[500px] lg:min-h-[auto]">
           {isEditing ? (
             /* Sub-Form Area for Operator Adding/Editing */
             <form onSubmit={handleSaveStudent} className="flex flex-col gap-4">
               <div className="flex justify-between items-center border-b border-natural-border pb-3">
                 <span className="text-sm font-display font-bold text-natural-darktext uppercase tracking-wider block">
-                  {editingStudentId ? 'Modify Operator Record' : 'Enroll New Operator'}
+                  {editingStudentId ? 'Modify ID Record' : 'Issue New ID'}
                 </span>
                 <button
                   type="button"
@@ -569,9 +776,23 @@ export default function App() {
 
               {/* Core form fields */}
               <div className="flex flex-col gap-3 text-xs">
+                {formCardDesignation === 'student' && (
+                <div className="flex flex-col gap-1">
+                  <label className="font-semibold text-natural-muted">Full Name *</label>
+                  <input
+                    type="text"
+                    autoFocus={!editingStudentId}
+                    className="bg-white border border-natural-darkborder rounded px-3 py-2 text-natural-darktext outline-none focus:border-natural-sage"
+                    placeholder="e.g. John Perera"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    required
+                  />
+                </div>
+                )}
                 
                 {/* Form Category Designation & Specialty Selectors */}
-                <div className="grid grid-cols-2 gap-3 bg-natural-sand/30 p-2.5 rounded-xl border border-natural-border/60">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-natural-sand/30 p-2.5 rounded-xl border border-natural-border/60">
                   <div className="flex flex-col gap-1">
                     <label className="font-bold text-natural-muted uppercase text-[9px] tracking-wider">Card Category</label>
                     <select
@@ -580,6 +801,10 @@ export default function App() {
                       onChange={(e) => {
                         const mode = e.target.value as 'student' | 'operator';
                         setFormCardDesignation(mode);
+                        setFormTrainingMethod(mode === 'student' ? 'FC' : 'TT');
+                        setFormStudentLookupId('');
+                        setOperatorLookupMessage('');
+                        setLinkedStudentId(null);
                         // Auto-update course
                         if (formEquipmentType === 'forklift') {
                           setFormCourse(mode === 'student' ? 'Forklift Operator Training' : 'Forklift Operator Certification');
@@ -605,15 +830,9 @@ export default function App() {
                         if (spec === 'forklift') {
                           setFormCourse(formCardDesignation === 'student' ? 'Forklift Operator Training' : 'Forklift Operator Certification');
                           setFormEquipmentClass('Counterbalance Forklift / Class A');
-                          if (formIdNumber.startsWith('BL-')) {
-                            setFormIdNumber(prev => 'FL' + prev.slice(2));
-                          }
                         } else {
                           setFormCourse(formCardDesignation === 'student' ? 'Backhoe Loader Operator Training' : 'Backhoe Loader Operator Certification');
                           setFormEquipmentClass('JCB Backhoe Loader / Class A');
-                          if (formIdNumber.startsWith('FL-')) {
-                            setFormIdNumber(prev => 'BL' + prev.slice(2));
-                          }
                         }
                       }}
                     >
@@ -622,6 +841,79 @@ export default function App() {
                     </select>
                   </div>
                 </div>
+
+                {formCardDesignation === 'operator' && (
+                  <>
+                    <div className="border border-natural-border bg-white p-3 flex flex-col gap-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-[10px] text-natural-darktext uppercase tracking-wider">Former Student Verification</span>
+                        <span className="text-[10px] text-natural-muted">Enter NIC first. Matching trainee details will be filled automatically.</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="flex flex-col gap-1">
+                          <span className="font-semibold text-natural-muted">NIC Number *</span>
+                          <input
+                            type="text"
+                            autoFocus={!editingStudentId}
+                            className="bg-white border border-natural-darkborder rounded px-2.5 py-2 text-natural-darktext outline-none focus:border-natural-sage"
+                            placeholder="e.g. 123456789V"
+                            value={formNic}
+                            onChange={(e) => {
+                              setFormNic(e.target.value);
+                              if (linkedStudentId) {
+                                setFormStudentLookupId('');
+                                setFormName('');
+                                setFormPhoto(undefined);
+                                setFormPhotoPath(undefined);
+                              }
+                              setLinkedStudentId(null);
+                              setOperatorLookupMessage('');
+                            }}
+                            onBlur={(e) => checkFormerStudentRecord(e.target.value)}
+                            required
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="font-semibold text-natural-muted">Student ID Check</span>
+                          <input
+                            type="text"
+                            className="bg-white border border-natural-darkborder rounded px-2.5 py-2 text-natural-darktext outline-none focus:border-natural-sage"
+                            placeholder="HMA/FL/FC/2026/000001"
+                            value={formStudentLookupId}
+                            onChange={(e) => {
+                              setFormStudentLookupId(e.target.value);
+                              setLinkedStudentId(null);
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => checkFormerStudentRecord()}
+                        className="self-start bg-natural-sage text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide"
+                      >
+                        Check Trainee Record
+                      </button>
+                      {operatorLookupMessage && (
+                        <div className={`px-3 py-2 text-[10px] font-semibold border ${linkedStudentId ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-natural-panel border-natural-border text-natural-muted'}`}>
+                          {operatorLookupMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="font-semibold text-natural-muted">Full Name *</label>
+                      <input
+                        type="text"
+                        className="bg-white border border-natural-darkborder rounded px-3 py-2 text-natural-darktext outline-none focus:border-natural-sage"
+                        placeholder="Auto-filled when a trainee is found, or enter manually"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Equipment Type & Classification Details */}
                 <div className="flex flex-col gap-1">
@@ -636,8 +928,39 @@ export default function App() {
                   />
                 </div>
 
-                {/* NIC & ID Code row */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
+                  <span className="font-bold text-[10px] text-natural-darktext uppercase tracking-wider">{formCardDesignation === 'operator' ? 'Operator ID Composition' : 'Student ID Composition'}</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Main Field
+                      <select value={formMainField} onChange={(e) => setFormMainField(e.target.value)} className="border border-natural-darkborder p-1.5 text-xs text-natural-darktext bg-white">
+                        <option value="HMA">HMA - Heavy Machinery</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Sub Field
+                      <input value={specialtyCode(formEquipmentType)} readOnly className="border border-natural-border bg-natural-panel p-1.5 text-xs text-natural-darktext font-bold" />
+                    </label>
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Training
+                      <select value={formTrainingMethod} onChange={(e) => setFormTrainingMethod(e.target.value as TrainingMethod)} className="border border-natural-darkborder p-1.5 text-xs text-natural-darktext bg-white">
+                        <option value="FC">FC - Full Course</option>
+                        <option value="TT">TT - Trade Test</option>
+                        <option value="GAP">GAP - Gap Filling</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Year
+                      <input value={formIdYear} onChange={(e) => setFormIdYear(e.target.value.replace(/\D/g, '').slice(0, 4))} className="border border-natural-darkborder p-1.5 text-xs text-natural-darktext" maxLength={4} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Serial
+                      <input value={formSerial} readOnly className="border border-natural-border bg-natural-panel p-1.5 text-xs text-natural-darktext font-bold" />
+                    </label>
+                  </div>
+                  <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Generated {formCardDesignation === 'operator' ? 'Operator' : 'Student'} ID
+                    <input value={generatedIdNumber} readOnly className="border border-natural-darkborder bg-natural-panel px-3 py-2 text-xs text-[#0c2340] font-black tracking-wide" />
+                  </label>
+                </div>
+
+                {/* NIC & generated ID row */}
+                {formCardDesignation === 'student' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
                     <label className="font-semibold text-natural-muted">NIC Number *</label>
                     <input
@@ -650,34 +973,20 @@ export default function App() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-natural-muted">ID/Cert Number *</label>
+                    <label className="font-semibold text-natural-muted">Issued ID Number</label>
                     <input
                       type="text"
-                      className="bg-white border border-natural-darkborder rounded px-2.5 py-2 text-natural-darktext outline-none focus:border-natural-sage"
-                      placeholder="e.g. FL-2026-001"
-                      value={formIdNumber}
-                      onChange={(e) => setFormIdNumber(e.target.value)}
-                      required
+                      className="bg-natural-panel border border-natural-border rounded px-2.5 py-2 text-[#0c2340] font-bold"
+                      value={generatedIdNumber}
+                      readOnly
                     />
                   </div>
                 </div>
-
-                {/* Name */}
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-natural-muted">Full Name *</label>
-                  <input
-                    type="text"
-                    className="bg-white border border-natural-darkborder rounded px-3 py-2 text-natural-darktext outline-none focus:border-natural-sage"
-                    placeholder="e.g. John Perera"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    required
-                  />
-                </div>
+                )}
 
                 {/* Course Title name */}
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-natural-muted">Certified Course Title</label>
+                  <label className="font-semibold text-natural-muted">{formCardDesignation === 'operator' ? 'Certification Course Title' : 'Training Course Title'}</label>
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-2 text-natural-darktext outline-none focus:border-natural-sage"
@@ -686,23 +995,24 @@ export default function App() {
                   />
                 </div>
 
-                {/* Triple Grade, Date, Center grid */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-natural-muted">Grade</label>
-                    <select
-                      className="bg-white border border-natural-darkborder rounded px-2.5 py-1.5 text-natural-darktext outline-none focus:border-natural-sage cursor-pointer"
-                      value={formGrade}
-                      onChange={(e) => setFormGrade(e.target.value)}
-                    >
-                      <option value="A">A</option>
-                      <option value="A+">A+</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1 col-span-2">
-                    <label className="font-semibold text-natural-muted">Issue Date</label>
+                <div className={`grid grid-cols-1 gap-2 ${formCardDesignation === 'operator' ? 'sm:grid-cols-3' : ''}`}>
+                  {formCardDesignation === 'operator' && (
+                    <div className="flex flex-col gap-1">
+                      <label className="font-semibold text-natural-muted">Grade</label>
+                      <select
+                        className="bg-white border border-natural-darkborder rounded px-2.5 py-1.5 text-natural-darktext outline-none focus:border-natural-sage cursor-pointer"
+                        value={formGrade}
+                        onChange={(e) => setFormGrade(e.target.value)}
+                      >
+                        <option value="A">A</option>
+                        <option value="A+">A+</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                      </select>
+                    </div>
+                  )}
+                  <div className={`flex flex-col gap-1 ${formCardDesignation === 'operator' ? 'sm:col-span-2' : ''}`}>
+                    <label className="font-semibold text-natural-muted">{formCardDesignation === 'operator' ? 'Issue Date' : 'Enrollment Date'}</label>
                     <input
                       type="text"
                       className="bg-white border border-natural-darkborder rounded px-2.5 py-2 text-natural-darktext outline-none focus:border-natural-sage"
@@ -725,7 +1035,7 @@ export default function App() {
 
                 {/* Profile Photo upload */}
                 <div className="border border-natural-border rounded-xl p-3 bg-white flex flex-col gap-2">
-                  <span className="font-bold text-[11px] uppercase tracking-wide text-natural-darktext block">Operator Portrait Photo</span>
+                  <span className="font-bold text-[11px] uppercase tracking-wide text-natural-darktext block">Cardholder Portrait Photo</span>
                   <div className="flex items-center gap-3">
                     {formPhoto ? (
                       <div className="relative w-12 h-14 bg-natural-sand rounded-lg overflow-hidden border border-natural-border">
@@ -758,9 +1068,14 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Custom Interactive Signature segment */}
+                {formCardDesignation === 'student' ? (
+                  <div className="border border-natural-border bg-white p-3 flex flex-col gap-1">
+                    <span className="font-bold text-[11px] uppercase tracking-wide text-natural-darktext">Admin Department Signature</span>
+                    <span className="text-[10px] text-natural-muted">Applied from Template settings: {config.adminSignatureText.trim() || 'Admin Department'}.</span>
+                  </div>
+                ) : (
                 <div className="border border-natural-border rounded-xl p-3 bg-white flex flex-col gap-2.5">
-                  <span className="font-bold text-[11px] uppercase tracking-wide text-natural-darktext block">Operator Signature</span>
+                  <span className="font-bold text-[11px] uppercase tracking-wide text-natural-darktext block">Admin Department Signature</span>
                   <div className="grid grid-cols-3 bg-natural-sand p-0.5 rounded-lg border border-natural-border">
                     <button
                       type="button"
@@ -788,16 +1103,16 @@ export default function App() {
                   {/* Render based on SigType */}
                   {formSigType === 'typed' && (
                     <div className="flex flex-col gap-1.5">
-                      <label className="font-semibold text-natural-muted text-[10px]">Type name to generate signature</label>
+                      <label className="font-semibold text-natural-muted text-[10px]">Authorized signatory label</label>
                       <input
                         type="text"
                         className="bg-white border border-natural-darkborder rounded px-2.5 py-1.5 text-natural-darktext outline-none text-xs focus:border-natural-sage"
-                        placeholder="e.g. John Perera"
+                        placeholder="Admin Department"
                         value={formSigText}
                         onChange={(e) => setFormSigText(e.target.value)}
                       />
                       <span className="font-formal-sig text-[32px] text-natural-sage text-center block h-12 py-1 select-none pointer-events-none">
-                        {formSigText || formName || "Preview"}
+                        {formSigText || "Admin Department"}
                       </span>
                     </div>
                   )}
@@ -842,6 +1157,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Action buttons */}
@@ -907,7 +1223,7 @@ export default function App() {
                             {student.name}
                           </span>
                           <span className="text-[9px] text-natural-muted font-mono tracking-tight block mt-0.5">
-                            {student.idNumber} • Grade {student.grade}
+                            {student.idNumber}{student.cardDesignation === 'operator' ? ` | Grade ${student.grade || 'A'}` : ''}
                           </span>
                           {/* Rich Badge indicators */}
                           <div className="flex items-center gap-1.5 mt-1">
@@ -978,7 +1294,192 @@ export default function App() {
                 </div>
               </div>
 
+              <div className="rounded-xl border border-natural-border bg-white p-3 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-black text-natural-darktext uppercase tracking-wider block">Canvas Designer</span>
+                    <span className="text-[9px] text-natural-muted font-semibold">Select or drag a layer on the card.</span>
+                  </div>
+                  <div className="flex bg-natural-panel border border-natural-border p-0.5 rounded-md">
+                    {(['front', 'back'] as const).map((side) => (
+                      <button
+                        key={side}
+                        type="button"
+                        onClick={() => {
+                          setEditingSide(side);
+                          setViewMode(side);
+                          setSelectedCanvasLayer(null);
+                        }}
+                        className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase ${editingSide === side ? 'bg-natural-sage text-white' : 'text-natural-muted'}`}
+                      >
+                        {side}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-[9px] rounded-md bg-natural-panel border border-natural-border p-2 font-semibold text-natural-muted uppercase tracking-wider">
+                  Editing {editingSurface.replace('-', ' ')} fixed design
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-natural-muted uppercase">
+                  <label className="flex items-center justify-between rounded-md border border-natural-border px-2 py-1.5">
+                    Main color
+                    <input type="color" value={config.primaryColor} onChange={(e) => setConfig((previous) => ({ ...previous, primaryColor: e.target.value }))} className="w-7 h-6 rounded border-0 p-0 bg-transparent" />
+                  </label>
+                  <label className="flex items-center justify-between rounded-md border border-natural-border px-2 py-1.5">
+                    Accent
+                    <input type="color" value={config.accentColor} onChange={(e) => setConfig((previous) => ({ ...previous, accentColor: e.target.value }))} className="w-7 h-6 rounded border-0 p-0 bg-transparent" />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
+                  {editingLayers.map((layer) => (
+                    <button
+                      key={layer.id}
+                      type="button"
+                      onClick={() => setSelectedCanvasLayer({ surface: editingSurface, id: layer.id })}
+                      className={`text-left px-2 py-1.5 rounded-md border text-[9.5px] font-bold truncate ${activeCanvasLayer?.id === layer.id ? 'border-natural-sage bg-natural-sage/10 text-natural-sage' : 'border-natural-border text-natural-text hover:bg-natural-panel'}`}
+                    >
+                      {layer.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => handleAddCanvasElement('text')} className="flex-1 flex items-center justify-center gap-1 rounded-md border border-natural-border bg-natural-panel p-1.5 text-[9px] font-bold uppercase text-natural-darktext">
+                    <Type className="w-3 h-3" /> Text
+                  </button>
+                  <button type="button" onClick={() => handleAddCanvasElement('rectangle')} className="flex-1 flex items-center justify-center gap-1 rounded-md border border-natural-border bg-natural-panel p-1.5 text-[9px] font-bold uppercase text-natural-darktext">
+                    <Square className="w-3 h-3" /> Box
+                  </button>
+                </div>
+
+                {activeCanvasLayer && (
+                  <div className="border-t border-natural-border pt-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase text-natural-darktext">{activeCanvasLayer.name}</span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          title={activeCanvasLayer.hidden ? 'Show layer' : 'Hide layer'}
+                          onClick={() => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { hidden: !activeCanvasLayer.hidden })}
+                          className="p-1 rounded border border-natural-border text-natural-muted hover:text-natural-darktext"
+                        >
+                          {activeCanvasLayer.hidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        </button>
+                        {activeCanvasLayer.kind !== 'builtin' && (
+                          <button type="button" onClick={handleDeleteCanvasElement} className="p-1 rounded border border-red-200 text-red-600">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {activeCanvasLayer.kind === 'text' && (
+                      <input
+                        type="text"
+                        value={activeCanvasLayer.text || ''}
+                        onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { text: e.target.value })}
+                        className="bg-natural-panel border border-natural-darkborder rounded px-2 py-1.5 text-xs outline-none focus:border-natural-sage"
+                        aria-label="Layer text"
+                      />
+                    )}
+
+                    <div className="grid grid-cols-3 gap-2 text-[9px] font-bold text-natural-muted uppercase">
+                      <label>X
+                        <input type="number" value={activeCanvasLayer.x} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { x: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                      </label>
+                      <label>Y
+                        <input type="number" value={activeCanvasLayer.y} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { y: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                      </label>
+                      <label>Rotate
+                        <input type="number" value={activeCanvasLayer.rotation} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { rotation: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                      </label>
+                      <label>Scale
+                        <input type="number" min="0.1" step="0.05" value={activeCanvasLayer.scale} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { scale: Number(e.target.value) || 1 })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                      </label>
+                      <label>Opacity
+                        <input type="number" min="0" max="1" step="0.1" value={activeCanvasLayer.opacity} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { opacity: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                      </label>
+                      <label>Layer
+                        <input type="number" value={activeCanvasLayer.zIndex} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { zIndex: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                      </label>
+                    </div>
+
+                    {activeCanvasLayer.kind !== 'builtin' && (
+                      <div className="grid grid-cols-3 gap-2 text-[9px] font-bold text-natural-muted uppercase">
+                        <label>Width
+                          <input type="number" value={activeCanvasLayer.width || 100} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { width: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                        </label>
+                        {activeCanvasLayer.kind !== 'text' && (
+                          <label>Height
+                            <input type="number" value={activeCanvasLayer.height || 50} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { height: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                          </label>
+                        )}
+                        {activeCanvasLayer.kind === 'text' && (
+                          <label>Font
+                            <input type="number" value={activeCanvasLayer.fontSize || 16} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { fontSize: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
+                          </label>
+                        )}
+                        <label>Color
+                          <input type="color" value={activeCanvasLayer.kind === 'text' ? (activeCanvasLayer.color || config.primaryColor) : (activeCanvasLayer.fill || config.accentColor)} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, activeCanvasLayer.kind === 'text' ? { color: e.target.value } : { fill: e.target.value, borderColor: e.target.value })} className="mt-1 w-full h-7 rounded border border-natural-darkborder" />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button type="button" onClick={handleResetCurrentSurface} className="text-[9px] font-bold uppercase tracking-wider text-natural-muted hover:text-natural-darktext self-start">
+                  Reset current side layout
+                </button>
+              </div>
+
               <div className="flex flex-col gap-3 text-xs">
+                <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
+                  <span className="font-bold text-[10.5px] text-natural-darktext uppercase tracking-wider">Company Logo</span>
+                  <span className="text-[9px] font-semibold text-natural-muted">Displayed on student and operator ID designs.</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 border border-natural-border bg-natural-panel flex items-center justify-center overflow-hidden">
+                      {config.institutionLogo ? (
+                        <img src={config.institutionLogo} alt="Company logo preview" className="max-w-full max-h-full object-contain p-1" />
+                      ) : (
+                        <span className="text-[9px] font-bold text-natural-muted uppercase">Default</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="inline-flex items-center gap-1 border border-natural-darkborder bg-natural-panel px-3 py-1.5 text-[9px] font-bold uppercase text-natural-darktext cursor-pointer hover:bg-natural-sand">
+                        <Upload className="w-3 h-3" /> Select Logo
+                        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleInstitutionLogoUpload} className="hidden" />
+                      </label>
+                      {config.institutionLogo && (
+                        <button
+                          type="button"
+                          onClick={() => setConfig((previous) => ({ ...previous, institutionLogo: undefined }))}
+                          className="text-[9px] font-bold uppercase text-red-600 text-left"
+                        >
+                          Remove logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
+                  <span className="font-bold text-[10.5px] text-natural-darktext uppercase tracking-wider">Admin Department Signature</span>
+                  <span className="text-[9px] font-semibold text-natural-muted">Default authorized signature shown on student ID designs.</span>
+                  <input
+                    type="text"
+                    className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
+                    value={config.adminSignatureText}
+                    onChange={(e) => setConfig((previous) => ({ ...previous, adminSignatureText: e.target.value }))}
+                    placeholder="Admin Department"
+                  />
+                  <span className="font-formal-sig text-[28px] text-[#0c2340] leading-none min-h-8">
+                    {config.adminSignatureText.trim() || 'Admin Department'}
+                  </span>
+                </div>
+
                 {/* Left Area header customizing text fields */}
                 <div className="flex flex-col gap-1">
                   <span className="font-bold text-[10.5px] text-natural-darktext block">LEFT ROW HEADER (BOLDEST)</span>
@@ -1064,7 +1565,7 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-[10.5px] text-natural-darktext block">CONTACT EMAIL</span>
+                  <span className="font-bold text-[10.5px] text-natural-darktext block">SECOND CONTACT TELEPHONE</span>
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
@@ -1088,12 +1589,12 @@ export default function App() {
         </section>
 
         {/* DETAILS PRESENTATION AREA - MAIN BODY RIGHT */}
-        <section className="col-span-12 lg:col-span-8 bg-natural-sand px-6 py-8 flex flex-col justify-between items-center h-full overflow-y-auto min-h-[500px]">
-          {selectedStudent ? (
-            <div className="flex-1 flex flex-col justify-center items-center gap-6 w-full max-w-4xl">
+        <section className="order-1 lg:order-2 col-span-12 lg:col-span-8 xl:col-span-9 bg-natural-sand px-3 py-4 sm:px-6 sm:py-8 flex flex-col justify-between items-center h-auto lg:h-full overflow-y-visible lg:overflow-y-auto min-h-[500px]">
+          {(selectedStudent || activeTab === 'config') ? (
+            <div className={`flex-1 flex flex-col justify-center items-center gap-4 sm:gap-6 w-full ${isExpandedPreview ? 'max-w-[1420px]' : 'max-w-4xl'}`}>
               
               {/* Toolbar preview switches */}
-              <div className="flex justify-between items-center w-full max-w-[860px] bg-white p-2.5 rounded-xl border border-natural-border shadow-sm">
+              <div className={`flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center w-full ${isExpandedPreview ? 'max-w-[1380px]' : 'max-w-[860px]'} bg-white p-2.5 rounded-xl border border-natural-border shadow-sm`}>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold tracking-widest text-natural-sage uppercase block pl-1">
                     ACTIVE CARD PREVIEW
@@ -1101,7 +1602,7 @@ export default function App() {
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
 
-                <div className="flex gap-1.5 bg-natural-panel p-0.5 rounded-lg border border-natural-border">
+                <div className="grid grid-cols-3 gap-1.5 bg-natural-panel p-0.5 rounded-lg border border-natural-border w-full sm:w-auto">
                   <button
                     onClick={() => setViewMode('both')}
                     className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition-all ${viewMode === 'both' ? 'bg-natural-sage text-white' : 'text-natural-muted hover:text-natural-darktext'}`}
@@ -1124,28 +1625,50 @@ export default function App() {
               </div>
 
               {/* Physical Render of Cards side by side or stacked */}
-              <div className="flex flex-col md:flex-row gap-8 items-center justify-center my-2 p-4 max-w-full overflow-x-auto">
+              <div className={`operator-preview-stage flex flex-col md:flex-row gap-5 items-center ${isExpandedPreview ? 'md:justify-start xl:justify-center' : 'justify-center'} my-2 p-2 w-full max-w-full overflow-x-auto`}>
                 {(viewMode === 'both' || viewMode === 'front') && (
                   <div className="flex flex-col items-center gap-2 flex-shrink-0 animate-fade-in">
-                    {viewMode === 'both' && <span className="text-[9.5px] font-extrabold text-[#0c2340] bg-[#e2a812]/15 text-[#8f6400] px-2.5 py-0.5 rounded-full uppercase tracking-widest">FRONT CARD</span>}
-                    <div className="bg-white p-3.5 rounded-[36px] border border-natural-border shadow-md scale-95 sm:scale-100 transition-transform">
-                      <IDCard student={previewStudent} config={config} showBack={false} />
+                    {viewMode === 'both' && <span className="text-[9.5px] font-extrabold text-[#0c2340] bg-[#e2a812]/15 text-[#8f6400] px-2.5 py-0.5 uppercase tracking-widest">FRONT CARD</span>}
+                    <div className={`preview-card-frame ${isOperatorPreview ? 'preview-card-frame--operator' : 'preview-card-frame--student'}`}>
+                      <div className="preview-card-paper bg-white p-2 border border-natural-border shadow-md">
+                        <IDCard
+                          student={previewStudent}
+                          config={config}
+                          showBack={false}
+                          designMode={activeTab === 'config'}
+                          selectedLayerId={selectedCanvasLayer?.id}
+                          selectedSurface={selectedCanvasLayer?.surface}
+                          onSelectLayer={handleSelectCanvasLayer}
+                          onChangeLayer={handleChangeCanvasLayer}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {(viewMode === 'both' || viewMode === 'back') && (
                   <div className="flex flex-col items-center gap-2 flex-shrink-0 animate-fade-in">
-                    {viewMode === 'both' && <span className="text-[9.5px] font-extrabold text-white bg-[#0c2340] px-2.5 py-0.5 rounded-full uppercase tracking-widest">REVERSE CARD</span>}
-                    <div className="bg-white p-3.5 rounded-[36px] border border-natural-border shadow-md scale-95 sm:scale-100 transition-transform">
-                      <IDCard student={previewStudent} config={config} showBack={true} />
+                    {viewMode === 'both' && <span className="text-[9.5px] font-extrabold text-white bg-[#0c2340] px-2.5 py-0.5 uppercase tracking-widest">REVERSE CARD</span>}
+                    <div className={`preview-card-frame ${isOperatorPreview ? 'preview-card-frame--operator' : 'preview-card-frame--student'}`}>
+                      <div className="preview-card-paper bg-white p-2 border border-natural-border shadow-md">
+                        <IDCard
+                          student={previewStudent}
+                          config={config}
+                          showBack={true}
+                          designMode={activeTab === 'config'}
+                          selectedLayerId={selectedCanvasLayer?.id}
+                          selectedSurface={selectedCanvasLayer?.surface}
+                          onSelectLayer={handleSelectCanvasLayer}
+                          onChangeLayer={handleChangeCanvasLayer}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Downloads action hub block */}
-              <div className="w-full max-w-[860px] bg-white rounded-2xl border border-natural-border p-5 flex flex-col gap-4 mt-2 shadow-sm">
+              <div className={`w-full ${isExpandedPreview ? 'max-w-[1380px]' : 'max-w-[860px]'} bg-white rounded-2xl border border-natural-border p-4 sm:p-5 flex flex-col gap-4 mt-2 shadow-sm`}>
                 <div className="flex flex-col">
                   <span className="text-sm font-display font-extrabold text-natural-darktext tracking-wide uppercase">
                     Export Credentials & ID Print
@@ -1155,7 +1678,7 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Option 1: Double Sided ID Size download */}
                   <button
                     onClick={() => handleDownloadPdf('exact')}

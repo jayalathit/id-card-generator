@@ -44,6 +44,128 @@ body {
   backface-visibility: hidden;
 }
 
+[data-design-layer][title] {
+  cursor: move;
+  touch-action: none;
+}
+
+[data-design-layer][data-design-selected="true"] {
+  outline: 2px dashed #5a5a40;
+  outline-offset: 3px;
+}
+
+.id-card-surface,
+.id-card-surface * {
+  border-radius: 0 !important;
+}
+
+.id-card-surface.bg-\[\#0c2340\],
+.id-card-surface .bg-\[\#0c2340\] {
+  background-color: var(--card-primary) !important;
+}
+
+.id-card-surface .text-\[\#0c2340\] {
+  color: var(--card-primary) !important;
+}
+
+.id-card-surface .border-\[\#0c2340\] {
+  border-color: var(--card-primary) !important;
+}
+
+.id-card-surface .bg-\[\#e2a812\] {
+  background-color: var(--card-accent) !important;
+}
+
+.id-card-surface .text-\[\#e2a812\] {
+  color: var(--card-accent) !important;
+}
+
+.id-card-surface .border-\[\#e2a812\] {
+  border-color: var(--card-accent) !important;
+}
+
+.id-card-surface [fill="#0c2340"] {
+  fill: var(--card-primary);
+}
+
+.id-card-surface [fill="#e2a812"] {
+  fill: var(--card-accent);
+}
+
+.pdf-export-host .id-card-surface {
+  box-shadow: none !important;
+}
+
+.pdf-export-host .id-card-surface *,
+.pdf-export-host .id-card-surface [data-design-layer] {
+  animation: none !important;
+  transition: none !important;
+}
+
+.preview-card-frame {
+  flex: 0 0 auto;
+}
+
+.preview-card-paper {
+  transform-origin: top center;
+  transition: transform 0.2s ease;
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .preview-card-frame--operator {
+    width: 568px;
+    height: 364px;
+  }
+
+  .preview-card-frame--operator .preview-card-paper {
+    transform: scale(0.85);
+  }
+}
+
+@media (max-width: 767px) {
+  .operator-preview-stage {
+    overflow-x: hidden;
+  }
+
+  .preview-card-frame--operator {
+    width: 334px;
+    height: 214px;
+  }
+
+  .preview-card-frame--operator .preview-card-paper {
+    transform: scale(0.5);
+  }
+
+  .preview-card-frame--student {
+    width: 321px;
+    height: 501px;
+  }
+
+  .preview-card-frame--student .preview-card-paper {
+    transform: scale(0.75);
+  }
+}
+
+@media (max-width: 350px) {
+  .preview-card-frame--operator {
+    width: 287px;
+    height: 184px;
+  }
+
+  .preview-card-frame--operator .preview-card-paper {
+    transform: scale(0.43);
+  }
+
+  .preview-card-frame--student {
+    width: 282px;
+    height: 441px;
+  }
+
+  .preview-card-frame--student .preview-card-paper {
+    transform: scale(0.66);
+  }
+}
+
 /* Print specific stylesheet rules for full-resolution print support */
 @media print {
   body {

@@ -6,6 +6,44 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+type CaptureCopy = {
+  host: HTMLDivElement;
+  element: HTMLElement;
+};
+
+function mountCaptureCopy(source: HTMLElement, width: number, height: number, top: number): CaptureCopy {
+  const host = document.createElement('div');
+  Object.assign(host.style, {
+    position: 'fixed',
+    left: '-10000px',
+    top: `${top}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+    overflow: 'hidden',
+    opacity: '1',
+    visibility: 'visible',
+    pointerEvents: 'none',
+    zIndex: '-1',
+    backgroundColor: '#ffffff'
+  });
+  host.className = 'pdf-export-host';
+
+  const element = source.cloneNode(true) as HTMLElement;
+  element.removeAttribute('id');
+  element.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+  Object.assign(element.style, {
+    width: `${width}px`,
+    height: `${height}px`,
+    opacity: '1',
+    visibility: 'visible',
+    transform: 'none'
+  });
+
+  host.appendChild(element);
+  document.body.appendChild(host);
+  return { host, element };
+}
+
 /**
  * Approximate but highly accurate conversion from OKLAB color space values to sRGB.
  */
@@ -123,6 +161,7 @@ export async function downloadIDCardPDF(
   }
 
   const originalGetComputedStyle = window.getComputedStyle;
+  const captureCopies: CaptureCopy[] = [];
 
   try {
     // Intercept window.getComputedStyle to automatically sanitize any 'oklch' values.
@@ -163,6 +202,31 @@ export async function downloadIDCardPDF(
       const isLandscape = orientation === 'landscape';
       const captureWidth = isLandscape ? 650 : 410;
       const captureHeight = isLandscape ? 410 : 650;
+      const frontCapture = mountCaptureCopy(frontEl, captureWidth, captureHeight, 0);
+      const backCapture = mountCaptureCopy(backEl, captureWidth, captureHeight, captureHeight + 24);
+      captureCopies.push(frontCapture, backCapture);
+
+      const assetWaitMs = 1200;
+      if (document.fonts?.ready) {
+        await Promise.race([
+          document.fonts.ready,
+          new Promise<void>((resolve) => window.setTimeout(resolve, assetWaitMs))
+        ]);
+      }
+
+      const captureImages = [...frontCapture.element.querySelectorAll('img'), ...backCapture.element.querySelectorAll('img')];
+      await Promise.all(captureImages.map((image) => {
+        if (image.complete) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(resolve, assetWaitMs);
+          const finish = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
+          image.addEventListener('load', finish, { once: true });
+          image.addEventListener('error', finish, { once: true });
+        });
+      }));
 
       // Temporarily apply clean, high-resolution layout and capture canvases
       // Using high zoom scaling (3x) for flawless print output quality
@@ -180,8 +244,8 @@ export async function downloadIDCardPDF(
         windowHeight: captureHeight
       };
 
-      const canvasFront = await html2canvas(frontEl, canvasOptions);
-      const canvasBack = await html2canvas(backEl, canvasOptions);
+      const canvasFront = await html2canvas(frontCapture.element, canvasOptions);
+      const canvasBack = await html2canvas(backCapture.element, canvasOptions);
 
       const imgFront = canvasFront.toDataURL('image/jpeg', 0.98);
       const imgBack = canvasBack.toDataURL('image/jpeg', 0.98);
@@ -270,6 +334,7 @@ export async function downloadIDCardPDF(
     } finally {
       // Restore original getComputedStyle method
       window.getComputedStyle = originalGetComputedStyle;
+      captureCopies.forEach(({ host }) => host.remove());
     }
 
     return true;

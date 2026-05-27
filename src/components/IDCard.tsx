@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { CSSProperties, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { Student, CardConfig } from '../types';
+import { CanvasElement, CardConfig, Student, TemplateSurface } from '../types';
+import { baseCanvasElement, getCanvasElement, surfaceFor, TEMPLATE_LAYERS } from '../designLayers';
 import { 
   User, 
   MapPin, 
@@ -24,6 +25,11 @@ interface IDCardProps {
   student: Student;
   config: CardConfig;
   showBack?: boolean;
+  designMode?: boolean;
+  selectedLayerId?: string;
+  selectedSurface?: TemplateSurface;
+  onSelectLayer?: (surface: TemplateSurface, id: string) => void;
+  onChangeLayer?: (surface: TemplateSurface, id: string, changes: Partial<CanvasElement>) => void;
 }
 
 function verificationUrl(configuredUrl: string, idNumber: string): string {
@@ -40,8 +46,16 @@ function verificationUrl(configuredUrl: string, idNumber: string): string {
   }
 }
 
-export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = false }) => {
-  const [frontQrUrl, setFrontQrUrl] = useState<string>('');
+export const IDCard: React.FC<IDCardProps> = ({
+  student,
+  config,
+  showBack = false,
+  designMode = false,
+  selectedLayerId,
+  selectedSurface,
+  onSelectLayer,
+  onChangeLayer
+}) => {
   const [backQrUrl, setBackQrUrl] = useState<string>('');
 
   const card_designation = student.cardDesignation || 'student';
@@ -49,25 +63,121 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
   const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
     ? 'Counterbalance Forklift / Class A'
     : 'JCB Backhoe Loader / Class A');
+  const surface = surfaceFor(card_designation, showBack);
+  const layoutElements = config.canvasElements || [];
+  const dragRef = useRef<{ id: string; pointerId: number; startX: number; startY: number; x: number; y: number } | null>(null);
+
+  const layerValue = (id: string): CanvasElement => {
+    const name = TEMPLATE_LAYERS[surface].find((layer) => layer.id === id)?.name || id;
+    return getCanvasElement(layoutElements, surface, id) || baseCanvasElement(surface, id, name);
+  };
+
+  const beginDrag = (event: React.PointerEvent<HTMLDivElement>, element: CanvasElement) => {
+    if (!designMode) return;
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      id: element.id,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: element.x,
+      y: element.y
+    };
+    onSelectLayer?.(surface, element.id);
+  };
+
+  const continueDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!designMode || !drag || drag.pointerId !== event.pointerId) return;
+    onChangeLayer?.(surface, drag.id, {
+      x: Math.round(drag.x + event.clientX - drag.startX),
+      y: Math.round(drag.y + event.clientY - drag.startY)
+    });
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+    }
+  };
+
+  const editorProps = (id: string): React.HTMLAttributes<HTMLDivElement> => {
+    const element = layerValue(id);
+    const isBackgroundLayer = id.endsWith('watermark');
+    const savedElement = getCanvasElement(layoutElements, surface, id);
+    return {
+      'data-design-layer': id,
+      'data-design-selected': designMode && selectedSurface === surface && selectedLayerId === id ? 'true' : undefined,
+      title: designMode ? element.name : undefined,
+      onPointerDown: designMode && !isBackgroundLayer ? (event) => beginDrag(event, element) : undefined,
+      onPointerMove: designMode && !isBackgroundLayer ? continueDrag : undefined,
+      onPointerUp: designMode && !isBackgroundLayer ? endDrag : undefined,
+      style: {
+        transform: `translate(${element.x}px, ${element.y}px) rotate(${element.rotation}deg) scale(${element.scale})`,
+        opacity: element.hidden ? 0 : element.opacity,
+        zIndex: savedElement?.zIndex,
+        visibility: element.hidden && !designMode ? 'hidden' : undefined,
+        pointerEvents: designMode && !isBackgroundLayer ? 'auto' : undefined
+      }
+    };
+  };
+
+  const customLayers = () => layoutElements
+    .filter((element) => element.surface === surface && element.kind !== 'builtin')
+    .map((element) => {
+      const style: CSSProperties = {
+        position: 'absolute',
+        left: element.x,
+        top: element.y,
+        width: element.width || 100,
+        height: element.kind === 'text' ? 'auto' : (element.height || 50),
+        color: element.color || config.primaryColor,
+        background: element.kind === 'text' ? 'transparent' : (element.fill || config.accentColor),
+        border: element.kind === 'text' ? undefined : `1px solid ${element.borderColor || element.fill || config.accentColor}`,
+        borderRadius: 0,
+        fontSize: element.fontSize || 16,
+        fontWeight: 700,
+        lineHeight: 1.1,
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transform: `rotate(${element.rotation}deg) scale(${element.scale})`,
+        opacity: element.hidden ? 0 : element.opacity,
+        visibility: element.hidden && !designMode ? 'hidden' : undefined,
+        zIndex: element.zIndex,
+        cursor: designMode ? 'move' : undefined,
+        pointerEvents: designMode ? 'auto' : 'none'
+      };
+
+      return (
+        <div
+          key={`${surface}-${element.id}`}
+          data-design-layer={element.id}
+          data-design-selected={designMode && selectedSurface === surface && selectedLayerId === element.id ? 'true' : undefined}
+          title={designMode ? element.name : undefined}
+          style={style}
+          onPointerDown={designMode ? (event) => beginDrag(event, element) : undefined}
+          onPointerMove={designMode ? continueDrag : undefined}
+          onPointerUp={designMode ? endDrag : undefined}
+        >
+          {element.kind === 'text' ? element.text : null}
+        </div>
+      );
+    });
+
+  const cardStyle = (width: string, height: string): CSSProperties => ({
+    width,
+    height,
+    minWidth: width,
+    minHeight: height,
+    '--card-primary': config.primaryColor || '#0c2340',
+    '--card-accent': config.accentColor || '#e2a812'
+  } as CSSProperties);
 
   // Generate real dynamic QR codes when student data or URLs change
   useEffect(() => {
-    // Front QR Code encodes the student profile summary
-    const designationLabel = card_designation === 'student' ? 'Student' : 'Certified Operator';
-    const specialtyLabel = equipment_type === 'forklift' ? 'Forklift' : 'Backhoe Loader';
-    const frontData = `Operator Status: ${designationLabel}\nSpecialty: ${specialtyLabel}\nName: ${student.name?.toUpperCase()}\nID No: ${student.idNumber?.toUpperCase()}\nNIC: ${student.nic?.toUpperCase()}\nGrade: ${student.grade?.toUpperCase()}\nInstitute: ${student.trainingCenter?.toUpperCase()}`;
-    
-    QRCode.toDataURL(frontData, {
-      margin: 1,
-      width: 140,
-      color: {
-        dark: '#0c2340',
-        light: '#ffffff'
-      }
-    })
-      .then(url => setFrontQrUrl(url))
-      .catch(err => console.error("Error generating front QR", err));
-
     // Back QR Code encodes the direct verification website url
     const backData = verificationUrl(config.backVerificationUrl, student.idNumber);
     QRCode.toDataURL(backData, {
@@ -87,6 +197,28 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
     <svg width="64" height="64" className="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
     </svg>
+  );
+
+  const CampusMark = ({ size = 42 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-label="Jayalath Campus logo" className="block">
+      <rect x="1.5" y="1.5" width="45" height="45" fill="#ffffff" stroke="#0c2340" strokeWidth="3" />
+      <path d="M9 14h30v3H9z" fill="#e2a812" />
+      <path d="M13 21h7v12c0 2.4-1.9 4-4.5 4-1.6 0-2.9-.5-4-1.5l2.1-2.7c.5.5 1 .7 1.5.7.7 0 1-.4 1-1.2V21z" fill="#0c2340" />
+      <path d="M36.2 32.5c-1.5 2.9-4 4.5-7.3 4.5-4.7 0-8.1-3.5-8.1-8.1 0-4.7 3.5-8.2 8.2-8.2 3.2 0 5.8 1.6 7.2 4.4l-3.6 1.7c-.7-1.5-1.9-2.3-3.5-2.3-2.3 0-4 1.8-4 4.4 0 2.5 1.7 4.3 4 4.3 1.6 0 2.8-.8 3.6-2.4z" fill="#0c2340" />
+    </svg>
+  );
+
+  const BrandLogo = ({ size = 42 }: { size?: number }) => (
+    config.institutionLogo ? (
+      <img
+        src={config.institutionLogo}
+        alt="Jayalath Campus logo"
+        style={{ width: size, height: size }}
+        className="object-contain p-1"
+      />
+    ) : (
+      <CampusMark size={size} />
+    )
   );
 
   // High-fidelity graphic watermarks of Forklift or Backhoe Loader
@@ -119,36 +251,25 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
   if (card_designation === 'operator') {
     if (showBack) {
       // Landscape Operator ID Back Side
-      const logoWords = config.backLogoLabel ? config.backLogoLabel.split(' ') : ["FAUGET", "HIGHSCHOOL"];
-      const logoFirst = logoWords[0] || "FAUGET";
-      const logoRest = logoWords.slice(1).join(' ') || "HIGHSCHOOL";
-
       return (
         <div 
           id={`card-back-${student.id}`}
-          className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
-          style={{ width: '650px', height: '410px', minWidth: '650px', minHeight: '410px' }}
+          className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+          style={cardStyle('650px', '410px')}
         >
-          {/* Subtle grid pattern inside */}
-          <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
-          
           {/* Watermark in background */}
-          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" {...editorProps('back-watermark')}>
             {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
           </div>
 
-          {/* Top wavy ribbon curve background layer */}
-          <div className="absolute top-0 left-0 right-0 h-[48px] overflow-hidden pointer-events-none select-none z-0">
-            <svg width="650" height="48" viewBox="0 0 650 48" className="w-full h-full" fill="none" preserveAspectRatio="none">
-              {/* Elegant golden transition stripe */}
-              <path d="M 0 0 C 180 32, 450 42, 650 18 L 650 0 Z" fill="#e2a812" opacity="0.9" />
-              {/* Solid dark blue header base */}
-              <path d="M 0 0 C 180 20, 450 30, 650 8 L 650 0 Z" fill="#0c2340" />
-            </svg>
+          {/* Precision top accent rails */}
+          <div className="absolute top-0 left-0 right-0 h-[10px] overflow-hidden pointer-events-none select-none z-0" {...editorProps('back-wave')}>
+            <div className="absolute top-0 inset-x-0 h-[7px] bg-[#0c2340]" />
+            <div className="absolute top-[7px] inset-x-0 h-[3px] bg-[#e2a812]" />
           </div>
 
           {/* Top Row Header area */}
-          <div className="relative z-10 flex items-center justify-between mt-[2px] mb-2">
+          <div className="relative z-10 flex items-center justify-between mt-[2px] mb-2" {...editorProps('back-header')}>
             {/* Header left: OPERATOR ID with line */}
             <div className="flex flex-col text-left">
               <span className="font-sans font-black text-[23px] text-[#0c2340] tracking-tight uppercase leading-none">
@@ -162,18 +283,15 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
 
             {/* Header right: Institution brand model logo */}
             <div className="flex items-center gap-2 pr-1">
-              <div className="w-8 h-8 rounded-full bg-[#0c2340]/5 border border-slate-100 flex items-center justify-center text-[#0c2340] shadow-sm">
-                <svg width="20" height="20" className="w-5 h-5 text-[#0c2340]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
-                  <path d="M19 12.18l-7 3.82-7-3.82V17l7 3.82 7-3.82v-4.82z" />
-                </svg>
+              <div className="w-9 h-9 flex items-center justify-center">
+                <BrandLogo size={34} />
               </div>
               <div className="flex flex-col leading-none text-left">
                 <span className="font-sans font-black text-[12px] text-[#0c2340] tracking-wider uppercase leading-none">
-                  {logoFirst}
+                  JAYALATH
                 </span>
                 <span className="text-[7.5px] font-extrabold text-slate-500 tracking-widest uppercase mt-[2.5px] leading-none">
-                  {logoRest}
+                  CAMPUS
                 </span>
               </div>
             </div>
@@ -182,7 +300,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           {/* Central content splitting columns */}
           <div className="relative z-10 grid grid-cols-12 gap-5 items-stretch mt-[15px] px-1">
             {/* Left side details */}
-            <div className="col-span-6 flex flex-col gap-[18px]">
+            <div className="col-span-6 flex flex-col gap-[18px]" {...editorProps('back-statement')}>
               <div className="flex items-start gap-3">
                 <div className="w-7.5 h-7.5 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-850">
                   <ShieldCheck size={15} className="stroke-[2.5]" />
@@ -208,7 +326,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
             </div>
 
             {/* Right side verification */}
-            <div className="col-span-6 flex flex-col justify-start items-center">
+            <div className="col-span-6 flex flex-col justify-start items-center" {...editorProps('back-verify')}>
               <div className="bg-[#0c2340] text-center text-white rounded-lg py-[4px] px-6 text-[8px] font-black tracking-widest uppercase mb-1.5 w-[190px] shadow border border-slate-800">
                 VERIFY OPERATOR DETAILS
               </div>
@@ -227,7 +345,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
                   <span className="text-[7.5px] font-bold text-gray-400 uppercase leading-none pb-[2px] block">
                     Website verification
                   </span>
-                  <span className="text-[9.5px] font-extrabold text-[#e2a812] tracking-wide block truncate select-all">
+                  <span className="text-[8px] font-extrabold text-[#e2a812] tracking-wide block break-all leading-snug select-all">
                     {config.backVerificationUrl}
                   </span>
                 </div>
@@ -236,13 +354,13 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           </div>
 
           {/* Footer Contacts Row */}
-          <div className="relative z-10 grid grid-cols-3 gap-3 border-t border-gray-200 pt-[10px] px-1 mt-auto pb-4">
+          <div className="relative z-10 grid grid-cols-3 gap-3 border-t border-gray-200 pt-[10px] px-1 mt-auto pb-4" {...editorProps('back-contact')}>
             {/* Column 1 Address */}
             <div className="flex items-start gap-2">
               <MapPin size={12} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">ADDRESS</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{config.backAddress || "Global Skills Institute\nNo. 123, Colombo."}</p>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{config.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."}</p>
               </div>
             </div>
             {/* Column 2 Contact */}
@@ -250,7 +368,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <Phone size={11} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{config.backContactPhone || "+94 XX XXX XXXX"}<br/>{config.backContactEmail || "info@globalskills.lk"}</p>
+                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{config.backContactPhone || "070 2 503 503"}<br/>{config.backContactEmail || "011 7 503 503"}</p>
               </div>
             </div>
             {/* Column 3 Envelope */}
@@ -264,7 +382,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           </div>
 
           {/* Dark Blue bottom footer bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-[22px] bg-[#0c2340] pointer-events-none select-none flex items-center justify-center border-t border-slate-800">
+          <div className="absolute bottom-0 left-0 right-0 h-[22px] bg-[#0c2340] pointer-events-none select-none flex items-center justify-center border-t border-slate-800" {...editorProps('back-footer')}>
             <div className="flex items-center gap-4 w-full px-6">
               <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#e2a812]/50" />
               <span className="text-[8px] font-sans font-black text-white uppercase tracking-[0.2em] mt-0.5 shrink-0 block">
@@ -273,6 +391,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#e2a812]/50" />
             </div>
           </div>
+          {customLayers()}
         </div>
       );
     } else {
@@ -280,54 +399,43 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
       const infoRows = [
         { label: 'NIC NO.', value: student.nic || '199012345V', icon: Fingerprint },
         { label: 'NAME', value: student.name || 'JOHN PERERA', icon: User },
-        { label: 'ID NUMBER', value: student.idNumber || 'FL-2026-006', icon: Award },
+        { label: 'ID NUMBER', value: student.idNumber || 'HMA/FL/FC/2026/000001', icon: Award },
         { label: 'GRADE', value: student.grade || 'A', icon: ShieldCheck },
         { label: 'COURSE', value: student.course || (equipment_type === 'forklift' ? 'FORKLIFT OPERATOR CERTIFICATION' : 'BACKHOE LOADER CERTIFICATION'), icon: BookOpen },
         { label: 'ISSUE DATE', value: student.issueDate || '26/05/2026', icon: Calendar },
-        { label: 'TRAINING CENTER', value: student.trainingCenter || 'GLOBAL SKILLS INSTITUTE', icon: Briefcase }
+        { label: 'TRAINING CENTER', value: student.trainingCenter || 'JAYALATH CAMPUS', icon: Briefcase }
       ];
 
       return (
         <div 
           id={`card-front-${student.id}`}
-          className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
-          style={{ width: '650px', height: '410px', minWidth: '650px', minHeight: '410px' }}
+          className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+          style={cardStyle('650px', '410px')}
         >
-          {/* Subtle grid pattern inside */}
-          <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
-          
           {/* Watermark in background */}
-          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" {...editorProps('front-watermark')}>
             {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
           </div>
 
-          {/* Wavy golden ribbon curve backgrounds matching Image 1 */}
-          <div className="absolute top-0 right-0 w-[240px] h-[95px] pointer-events-none overflow-hidden z-0">
-            <svg width="240" height="95" viewBox="0 0 240 95" className="w-full h-full" fill="none" preserveAspectRatio="none">
-              {/* Elegant golden wavy underlying trim */}
-              <path d="M 0 0 C 60 45, 150 78, 240 16 L 240 0 Z" fill="#e2a812" opacity="0.95" />
-              {/* Navy wavy top overlay */}
-              <path d="M 20 0 C 80 38, 160 56, 240 0 L 240 0 Z" fill="#0c2340" />
-            </svg>
+          {/* Precision corner accent rails */}
+          <div className="absolute top-0 right-0 w-[240px] h-[10px] pointer-events-none overflow-hidden z-0" {...editorProps('front-wave')}>
+            <div className="absolute top-0 inset-x-0 h-[7px] bg-[#0c2340]" />
+            <div className="absolute top-[7px] inset-x-0 h-[3px] bg-[#e2a812]" />
           </div>
 
           {/* Top Row Header area */}
-          <div className="relative z-10 flex items-center justify-between">
+          <div className="relative z-10 flex items-center justify-between" {...editorProps('front-header')}>
             {/* Header left: Logo Box & JAYALATH Campus text */}
             <div className="flex items-center select-none">
-              <div className="w-[110px] h-[52px] border border-dashed border-slate-300 rounded-[10px] bg-slate-50/50 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-                {config.institutionLogo ? (
-                  <img src={config.institutionLogo} alt="Logo" className="max-h-full max-w-full object-contain p-1" />
-                ) : (
-                  <span className="text-[9.5px] font-bold text-slate-400 tracking-wider font-mono">LOGO HERE</span>
-                )}
+              <div className="w-[58px] h-[58px] flex items-center justify-center overflow-hidden shrink-0">
+                <BrandLogo size={52} />
               </div>
               <div className="flex flex-col text-left pl-3.5">
                 <span className="font-sans font-extrabold text-[23px] text-[#0c2340] leading-none tracking-tight">
                   {config.leftMainHeader || 'JAYALATH CAMPUS'}
                 </span>
                 <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
-                  {config.leftSubHeader || "CAMPUS FOR CONSTRUCTION & INDUSTRIAL TRAINING CENTER"}
+                  {config.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
                 </span>
               </div>
             </div>
@@ -338,10 +446,10 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
             {/* Header right: INSTITUTION branding */}
             <div className="flex flex-col text-center pr-3 min-w-[120px]">
               <span className="font-sans font-black text-[16px] tracking-tight text-[#0c2340] leading-none uppercase">
-                {config.rightMainHeader || "JAYALATH"}
+                {config.rightMainHeader || "OFFICIAL ID"}
               </span>
               <span className="text-[9px] font-bold text-[#e2a812] tracking-[0.15em] mt-1.5 leading-none uppercase">
-                — {config.rightSubHeader || "INSTITUTE"} —
+                {config.rightSubHeader || "CREDENTIAL"}
               </span>
             </div>
           </div>
@@ -349,7 +457,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           {/* Central Section Grid */}
           <div className="relative z-10 grid grid-cols-12 gap-4 items-start mt-4">
             {/* Left side parameters list */}
-            <div className="col-span-8 flex flex-col gap-3">
+            <div className="col-span-8 flex flex-col gap-3" {...editorProps('front-details')}>
               {/* Title zone: Machine logo box + Heavy operator title labels */}
               <div className="flex items-center gap-3 text-left">
                 {/* Visual indicator card */}
@@ -403,7 +511,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
                       {/* Aligned colons column */}
                       <span className="text-[10px] font-black text-[#0c2340] block w-[10px] shrink-0 text-center pr-1">:</span>
                       {/* Uppercase formatted bold values for elite card design */}
-                      <span className="flex-1 text-[10px] font-black text-[#0c2340] uppercase truncate leading-none mt-[1px] text-left select-all tracking-[0.02em] font-sans">
+                      <span className="flex-1 text-[9.5px] font-black text-[#0c2340] uppercase whitespace-nowrap leading-none mt-[1px] text-left select-all tracking-[0.02em] font-sans">
                         {String(row.value).toUpperCase()}
                       </span>
                     </div>
@@ -413,7 +521,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
             </div>
 
             {/* Right side portrait photo, signature */}
-            <div className="col-span-4 flex flex-col items-center pl-1 shrink-0">
+            <div className="col-span-4 flex flex-col items-center pl-1 shrink-0" {...editorProps('front-photo')}>
               {/* Slate dark blue outline border enclosing custom photo */}
               <div className="border-[2px] border-[#0c2340] rounded-[28px] w-[155px] h-[190px] bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center shadow-md">
                 {student.photo ? (
@@ -430,10 +538,10 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
 
               {/* Signature section below photo */}
               <div className="flex flex-col items-center justify-center mt-3 z-10 w-full">
-                <div className="relative h-8 flex items-center justify-center w-[160px] overflow-hidden">
+                <div className="relative h-8 flex items-center justify-center w-[160px]">
                   {student.signatureType === 'typed' ? (
-                    <span className="font-formal-sig text-[32px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none">
-                      {student.signatureText || student.name || "D. Jayalath"}
+                    <span className="font-formal-sig text-[24px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none whitespace-nowrap">
+                      {student.signatureText || "Admin Department"}
                     </span>
                   ) : student.signatureImage ? (
                     <img src={student.signatureImage} alt="Signature" className="h-7 max-w-[140px] mt-0.5 object-contain select-none pointer-events-none" />
@@ -445,55 +553,35 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
                 </div>
                 {/* Horizontal signature line */}
                 <div className="w-[155px] h-[1px] bg-slate-400" />
-                <span className="text-[7px] font-black text-slate-400 tracking-[0.2em] uppercase mt-[5px] block leading-none">
-                  SIGNATURE
+                <span className="text-[5.5px] font-black text-slate-400 tracking-[0.12em] uppercase mt-[5px] block leading-none whitespace-nowrap">
+                  ADMIN DEPARTMENT SIGNATURE
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Bottom QR & Validity row */}
-          <div className="relative z-10 flex items-end justify-between mt-auto px-1 pb-[9px]">
-            <div className="flex items-center gap-3">
-              {/* Perfect white QR container */}
-              <div className="bg-white border border-slate-200 p-0.5 rounded-lg shadow-sm w-[64px] h-[64px] flex items-center justify-center">
-                {frontQrUrl ? (
-                  <img src={frontQrUrl} alt="Front ID QR Code" className="w-[58px] h-[58px] object-contain" />
-                ) : (
-                  <div className="w-full h-full bg-slate-100 rounded" />
-                )}
-              </div>
-
-              {/* Validity check tag bubble matching Image 1 */}
-              <div className="bg-[#0c2340] border border-slate-850 rounded-[10px] h-11 px-3 flex items-center gap-2.5 shadow-sm">
-                <div className="w-5 h-5 bg-white/10 rounded-full flex items-center justify-center text-[#e2a812] flex-shrink-0">
-                  <ShieldCheck size={11} className="stroke-[3]" />
-                </div>
-                <div className="flex flex-col text-left leading-none justify-center">
-                  <span className="text-[6.5px] font-bold text-[#e2a812] tracking-wider uppercase block">
-                    VALID FOR
-                  </span>
-                  <span className="text-[10px] font-black text-white mt-[2.5px] uppercase block tracking-wider">
-                    2 YEARS
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Compact verification line; full QR verification is provided on the reverse side. */}
+          <div className="relative z-10 flex items-center justify-between mt-auto mb-[23px] px-1 border-t border-slate-100 pt-2" {...editorProps('front-verify')}>
+            <span className="text-[7px] font-black uppercase tracking-[0.16em] text-slate-400">
+              Issued by Jayalath Campus
+            </span>
+            <span className="text-[7px] font-black uppercase tracking-[0.12em] text-[#0c2340]">
+              Verify: {config.backVerificationUrl}
+            </span>
           </div>
 
-          {/* Solid Absolute Bottom Ribbon Footer Bar matching Image 1 */}
-          <div className="absolute bottom-0 left-0 right-0 h-9 bg-[#0c2340] pointer-events-none select-none rounded-b-[32px] overflow-hidden flex items-center justify-between px-6 z-10">
-            {/* Left side slanted gold bar ribbon */}
-            <div className="absolute left-0 bottom-0 top-0 w-8 bg-gradient-to-r from-[#e2a812] to-amber-500 h-full origin-bottom-left -skew-x-[24deg] border-r border-[#0c2340]" />
+          {/* Solid footer with squared gold terminals */}
+          <div className="absolute bottom-0 left-0 right-0 h-9 bg-[#0c2340] border-t-[3px] border-[#e2a812] pointer-events-none select-none overflow-hidden flex items-center justify-between px-6 z-10" {...editorProps('front-footer')}>
+            <div className="absolute left-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
             
             {/* Centered slogans with high spacing */}
             <span className="text-[9px] font-sans font-black tracking-[0.16em] text-white uppercase z-10 mx-auto block leading-none">
               SAFE HANDS  •  SKILLED MINDS  •  STRONGER FUTURE
             </span>
 
-            {/* Right side slanted gold bar ribbon */}
-            <div className="absolute right-0 bottom-0 top-0 w-8 bg-gradient-to-l from-[#e2a812] to-amber-500 h-full origin-bottom-right skew-x-[24deg] border-l border-[#0c2340]" />
+            <div className="absolute right-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
           </div>
+          {customLayers()}
         </div>
       );
     }
@@ -507,30 +595,24 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
     return (
       <div 
         id={`card-back-${student.id}`}
-        className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
-        style={{ width: '410px', height: '650px', minWidth: '410px', minHeight: '650px' }}
+        className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+        style={cardStyle('410px', '650px')}
       >
         {/* Punch Card Slot Punch representation on top */}
-        <div className="absolute top-2 left-0 right-0 z-20 flex justify-center">
+        <div className="absolute top-2 left-0 right-0 z-20 flex justify-center" {...editorProps('back-slot')}>
           <div className="w-[72px] h-[13px] bg-white rounded-full border border-gray-300 shadow-inner opacity-80" />
         </div>
 
-        {/* Diagonal high-fidelity structural grid stripes */}
-        <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
-        
         {/* Central Graphic Watermark watermark decoration */}
-        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" {...editorProps('back-watermark')}>
           {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
         </div>
 
         {/* Back Upper Banner Title Zone */}
-        <div className="relative z-10 flex items-center justify-between mt-3 mb-1 border-b border-gray-200/60 pb-2">
+        <div className="relative z-10 flex items-center justify-between mt-3 mb-1 border-b border-gray-200/60 pb-2" {...editorProps('back-header')}>
           {/* logo cap decoration */}
-          <div className="w-[66px] h-[45px] border-[2.5px] border-[#0c2340] rounded-xl bg-white flex items-center justify-center shadow-sm">
-            <svg width="32" height="32" className="w-8 h-8 text-[#0c2340]" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z" />
-              <path d="M19 12.18l-7 3.82-7-3.82V17l7 3.82 7-3.82v-4.82z" />
-            </svg>
+            <div className="w-[52px] h-[52px] flex items-center justify-center">
+              <BrandLogo size={48} />
           </div>
 
           <div className="flex-1 text-right pl-3">
@@ -549,10 +631,10 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
         </div>
 
         {/* Central body containing instructions */}
-        <div className="relative z-10 flex-1 flex flex-col justify-between py-1 my-[2px] font-sans text-left gap-3">
+        <div className="relative z-10 flex-1 flex flex-col justify-between pt-1 pb-[50px] my-[2px] font-sans text-left gap-2">
           
           {/* Section: SAFETY INSTRUCTIONS */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1" {...editorProps('back-safety')}>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
                 <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
@@ -590,7 +672,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           </div>
 
           {/* Section: EMERGENCY CONTACT */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1" {...editorProps('back-contact')}>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
                 <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
@@ -603,12 +685,12 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[9px] text-[#0c2340] font-black pl-4 uppercase">
-              Contact: {config.backContactPhone || "+94 11 2 345 678"} <span className="text-gray-400 font-normal px-1">|</span> {config.backContactEmail || "INFO@JAYALATHCAMPUS.LK"}
+              Contact: {config.backContactPhone || "070 2 503 503"} <span className="text-gray-400 font-normal px-1">|</span> {config.backContactEmail || "011 7 503 503"}
             </p>
           </div>
 
           {/* Section: QR CODE VERIFICATION PORT CAP */}
-          <div className="grid grid-cols-12 gap-3 items-center py-1.5 border-y border-slate-100">
+          <div className="grid grid-cols-12 gap-3 items-center py-1.5 border-y border-slate-100" {...editorProps('back-verify')}>
             {/* QR block Left Column */}
             <div className="col-span-5 flex justify-center">
               <div className="bg-white border-2 border-[#0c2340] p-1 rounded-xl shadow-md w-[100px] h-[100px] flex items-center justify-center">
@@ -635,7 +717,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
                   <span className="text-[7.5px] font-black tracking-widest text-[#e2a812] block uppercase leading-none">
                     VERIFY AT:
                   </span>
-                  <span className="text-[9px] font-extrabold text-white block truncate leading-relaxed mt-0.5 select-all">
+                  <span className="text-[8px] font-extrabold text-white block leading-snug break-all mt-0.5 select-all">
                     {config.backVerificationUrl}
                   </span>
                 </div>
@@ -644,7 +726,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           </div>
 
           {/* Section: AUTHORIZED STUDY STATEMENT */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1" {...editorProps('back-statement')}>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
                 <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
@@ -657,12 +739,12 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[8.5px] text-slate-500 font-semibold pl-4 leading-normal">
-              This ID card is issued to the above-named trainee who is currently enrolled in an approved heavy equipment training program at Jayalath Campus for Construction & Industrial Training.
+              This ID card confirms that the above-named trainee is enrolled in an approved career training programme conducted by Jayalath Campus.
             </p>
           </div>
 
           {/* Section: ADDRESS */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1" {...editorProps('back-address')}>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-4 h-4 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0">
                 <svg width="10" height="10" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
@@ -675,36 +757,29 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[8.5px] text-slate-500 font-semibold pl-4 leading-normal whitespace-pre-line tracking-tight uppercase">
-              {config.backAddress || "Jayalath Campus for Construction & Industrial Training\nNo. 123, Industrial Training Road,\nKandana, Western Province, Sri Lanka."}
+              {config.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka."}
             </p>
           </div>
 
         </div>
 
-        {/* Absolute Bottom Solid bar curved */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none select-none overflow-hidden rounded-b-[32px] z-10">
-          <svg width="410" height="65" viewBox="0 0 410 65" className="absolute bottom-0 left-0 w-full h-[65px]" fill="none" preserveAspectRatio="none">
-            {/* Elegant wavy golden layer */}
-            <path d="M 0 30 Q 150 5, 410 40 L 410 65 L 0 65 Z" fill="#e2a812" opacity="0.9" />
-            {/* Dark Blue solid overlay */}
-            <path d="M 0 36 Q 160 14, 410 46 L 410 65 L 0 65 Z" fill="#0c2340" />
-          </svg>
-          
-          {/* Important warning contents inside curves */}
+        {/* Squared warning footer */}
+        <div className="absolute bottom-0 left-0 right-0 h-[52px] bg-[#0c2340] border-t-[4px] border-[#e2a812] pointer-events-none select-none overflow-hidden z-10" {...editorProps('back-footer')}>
           <div className="absolute bottom-2 left-4 right-4 z-20 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#e2a812] flex items-center justify-center text-[#0b1b30] flex-shrink-0">
+            <div className="w-7 h-7 bg-[#e2a812] flex items-center justify-center text-[#0b1b30] flex-shrink-0">
               <span className="text-sm font-black text-[#0c2340] leading-none mb-0.5 font-mono">!</span>
             </div>
             <div className="text-left text-white leading-tight">
               <span className="text-[7px] font-black text-[#e2a812] uppercase block tracking-wider">
                 IMPORTANT NOTE
               </span>
-              <span className="text-[8.5px] font-bold text-slate-200 block truncate-2-lines max-w-[320px] uppercase">
+              <span className="text-[8.5px] font-bold text-slate-200 block max-w-[320px] uppercase">
                 This card is valid only during the training period shown on the front.
               </span>
             </div>
           </div>
         </div>
+        {customLayers()}
 
       </div>
     );
@@ -714,42 +789,28 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
   return (
     <div 
       id={`card-front-${student.id}`}
-      className="relative bg-white border border-gray-300 rounded-[32px] overflow-hidden text-slate-800 flex flex-col justify-between p-0 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
-      style={{ width: '410px', height: '650px', minWidth: '410px', minHeight: '650px' }}
+      className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-0 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+      style={cardStyle('410px', '650px')}
     >
       {/* Absolute top punch card slot representation */}
-      <div className="absolute top-2 left-0 right-0 z-20 flex justify-center">
+      <div className="absolute top-2 left-0 right-0 z-20 flex justify-center" {...editorProps('front-slot')}>
         <div className="w-[72px] h-[13px] bg-white rounded-full border border-gray-300 shadow-inner opacity-80" />
       </div>
 
-      {/* Structured grid background decoration */}
-      <div data-html2canvas-ignore="true" className="absolute inset-0 z-0 opacity-[0.015] pointer-events-none bg-[radial-gradient(#0c2340_1px,transparent_1px)] [background-size:16px_16px]" />
-
       {/* Graphic Watermark background placement */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" {...editorProps('front-watermark')}>
         {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
       </div>
 
       {/* High Fidelity Curved Header Wave block */}
-      <div className="relative z-10 w-full bg-[#0c2340] pt-[28px] pb-[18px] px-[18px] flex flex-col justify-end text-white select-none shadow-md">
+      <div className="relative z-10 w-full bg-[#0c2340] pt-[28px] pb-[18px] px-[18px] flex flex-col justify-end text-white select-none shadow-md" {...editorProps('front-header')}>
         
         {/* Upper Logo Area */}
         <div className="flex justify-between items-center gap-3">
           
           {/* Institution Logo Box with golden border */}
           <div className="w-[78px] h-[78px] border-[2px] border-[#e2a812] bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
-            {config.institutionLogo ? (
-              <img src={config.institutionLogo} alt="Logo" className="w-full h-full object-contain p-1" />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-1 font-mono text-center">
-                <svg width="40" height="40" className="w-10 h-10 text-[#0c2340]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2L1 21h22L12 2zm0 4l7.5 13h-15L12 6z" />
-                </svg>
-                <span className="text-[5.5px] text-[#0c2340] font-bold block pt-1 tracking-tighter uppercase leading-none">
-                  CAMPUS ID
-                </span>
-              </div>
-            )}
+            <BrandLogo size={54} />
           </div>
 
           {/* Institution Names Column */}
@@ -758,19 +819,15 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               {config.leftMainHeader || "JAYALATH CAMPUS"}
             </span>
             <span className="font-sans font-extrabold text-[7.5px] text-[#e2a812] uppercase tracking-wide block mt-[3px] leading-tight text-right">
-              {config.leftSubHeader || "FOR CONSTRUCTION & INDUSTRIAL TRAINING"}
+              {config.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
             </span>
           </div>
         </div>
 
-        {/* Dynamic Curved Swooshes splitting colors */}
-        <div className="absolute left-0 right-0 bottom-[-24px] h-[25px] z-10 pointer-events-none select-none">
-          <svg width="410" height="25" viewBox="0 0 410 25" className="absolute top-0 left-0 w-full h-full" fill="none" preserveAspectRatio="none">
-            {/* Elegant Golden Transition stripe */}
-            <path d="M 0 0 C 130 18, 280 20, 410 0 L 410 20 C 280 23, 130 14, 0 10 Z" fill="#e2a812" opacity="0.9" />
-            {/* Solid Navy Body mask */}
-            <path d="M 0 0 C 130 14, 280 18, 410 0 L 410 12 L 0 5 Z" fill="#0c2340" />
-          </svg>
+        {/* Crisp transition rails */}
+        <div className="absolute left-0 right-0 bottom-[-6px] h-[6px] z-10 pointer-events-none select-none" {...editorProps('front-wave')}>
+          <div className="absolute top-0 inset-x-0 h-[4px] bg-[#e2a812]" />
+          <div className="absolute top-[4px] inset-x-0 h-[2px] bg-[#0c2340]" />
         </div>
       </div>
 
@@ -778,7 +835,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
       <div className="relative z-10 px-4 pt-[18px] flex-1 flex flex-col justify-start">
         
         {/* Large centered card ID type designation */}
-        <div className="flex items-center justify-center gap-3.5 my-3">
+        <div className="flex items-center justify-center gap-3.5 my-3" {...editorProps('front-title')}>
           <div className="h-[1.5px] flex-1 bg-gradient-to-r from-transparent to-[#e2a812]" />
           <span className="font-sans font-black text-[21px] text-[#0c2340] tracking-[0.12em] block uppercase leading-none text-center">
             STUDENT ID
@@ -790,7 +847,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
         <div className="grid grid-cols-12 gap-3.5 items-start my-2">
           
           {/* Column 1: Portrait photo with gold frame and rounded shadow */}
-          <div className="col-span-4 flex justify-center">
+          <div className="col-span-4 flex justify-center" {...editorProps('front-photo')}>
             <div className="border-[2px] border-[#e2a812] rounded-2.5xl w-[114px] h-[138px] bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center shadow-lg">
               {student.photo ? (
                 <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
@@ -806,14 +863,14 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           </div>
 
           {/* Column 2: Aligned Form values with grey bottom borders */}
-          <div className="col-span-8 flex flex-col justify-between h-[138px] text-left pl-1">
+          <div className="col-span-8 flex flex-col justify-between h-[138px] text-left pl-1" {...editorProps('front-details')}>
             
             {/* Full operator name */}
             <div className="flex flex-col">
               <span className="text-[6.5px] font-black text-slate-400 tracking-wider uppercase leading-none pb-0.5">
                 FULL NAME
               </span>
-              <span className="text-[13px] font-extrabold text-[#0c2340] uppercase border-b border-slate-100 pb-[3px] leading-tight truncate">
+              <span className="text-[13px] font-extrabold text-[#0c2340] uppercase border-b border-slate-100 pb-[3px] leading-tight whitespace-nowrap">
                 {String(student.name || "JOHN PERERA").toUpperCase()}
               </span>
             </div>
@@ -823,8 +880,8 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <span className="text-[6.5px] font-black text-slate-400 tracking-wider uppercase leading-none pb-0.5">
                 STUDENT / TRAINEE ID NO.
               </span>
-              <span className="text-[12.5px] font-black text-[#0c2340] font-mono border-b border-slate-100 pb-[3px] leading-tight select-all">
-                {String(student.idNumber || "FL-2026-006").toUpperCase()}
+              <span className="text-[10px] font-black text-[#0c2340] font-mono border-b border-slate-100 pb-[3px] leading-tight tracking-tight select-all whitespace-nowrap">
+                {String(student.idNumber || "HMA/FL/FC/2026/000001").toUpperCase()}
               </span>
             </div>
 
@@ -833,7 +890,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <span className="text-[6.5px] font-black text-slate-400 tracking-wider uppercase leading-none pb-0.5">
                 COURSE TITLE
               </span>
-              <span className="text-[11.5px] font-bold text-slate-600 border-b border-slate-100 pb-[3px] leading-tight truncate uppercase">
+              <span className="text-[10.5px] font-bold text-slate-600 border-b border-slate-100 pb-[3px] leading-tight whitespace-nowrap uppercase">
                 {String(student.course || (equipment_type === 'forklift' ? 'FORKLIFT OPERATOR CERTIFICATION' : 'BACKHOE LOADER CERTIFICATION')).toUpperCase()}
               </span>
             </div>
@@ -841,7 +898,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
         </div>
 
         {/* Lower Row Items (Institutional Badge lists) */}
-        <div className="flex flex-col gap-2 mt-4 text-left">
+        <div className="flex flex-col gap-2 mt-4 text-left" {...editorProps('front-badges')}>
           
           {/* Row 1: Issuing school platform */}
           <div className="flex items-center gap-3 py-[2px] border-b border-slate-100">
@@ -854,8 +911,8 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
                 TRAINING INSTITUTE / COMPANY
               </span>
-              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight truncate max-w-[244px] mt-[4px] uppercase">
-                {String(student.trainingCenter || "GLOBAL SKILLS INSTITUTE").toUpperCase()}
+              <span className="text-[9.5px] font-black text-[#0c2340] block tracking-tight whitespace-nowrap max-w-[244px] mt-[4px] uppercase">
+                {String(student.trainingCenter || "JAYALATH CAMPUS").toUpperCase()}
               </span>
             </div>
           </div>
@@ -871,7 +928,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
                 {equipment_type === 'forklift' ? 'FORKLIFT TYPE / CLASS' : 'BACKHOE LOADER TYPE'}
               </span>
-              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight truncate max-w-[244px] mt-[4px] uppercase">
+              <span className="text-[9.5px] font-black text-[#0c2340] block tracking-tight whitespace-nowrap max-w-[244px] mt-[4px] uppercase">
                 {String(equipment_class).toUpperCase()}
               </span>
             </div>
@@ -889,7 +946,7 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
               <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
                 DATE OF ENROLLMENT
               </span>
-              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight truncate mt-[4px] uppercase">
+              <span className="text-[10px] font-black text-[#0c2340] block tracking-tight whitespace-nowrap mt-[4px] uppercase">
                 {String(student.issueDate || '26/05/2026').toUpperCase()}
               </span>
             </div>
@@ -897,36 +954,26 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
         </div>
 
         {/* Fine, Handwritten Signature Zone */}
-        <div className="mt-4 flex items-end justify-between px-1 border-t border-slate-100 pt-2.5">
+        <div className="mt-4 flex items-end justify-between px-1 border-t border-slate-100 pt-2.5" {...editorProps('front-signature')}>
           <div className="text-left leading-none flex flex-col justify-end">
             <span className="text-[6.5px] font-black text-slate-400 tracking-widest uppercase block mb-1">
-              TRAINEE SIGNATURE
+                ADMIN DEPARTMENT SIGNATURE
             </span>
             <div className="w-[124px] h-[1px] border-b border-dashed border-slate-300" />
           </div>
 
           {/* Dynamic Signature Vector Cursive */}
-          <div className="relative h-10 flex items-center justify-center pr-3 min-w-[130px] bottom-[3px] overflow-hidden">
-            {student.signatureType === 'typed' ? (
-              <span className="font-formal-sig text-[38px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none">
-                {student.signatureText || student.name || "D. Jayalath"}
-              </span>
-            ) : student.signatureImage ? (
-              <img src={student.signatureImage} alt="Signature" className="h-8 max-w-[140px] object-contain select-none pointer-events-none" />
-            ) : (
-              <span className="font-signature text-[25px] text-slate-400 italic font-normal">
-                D. Jayalath
-              </span>
-            )}
+          <div className="relative h-10 flex items-center justify-center pr-3 min-w-[130px] bottom-[3px]">
+            <span className="font-formal-sig text-[30px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none whitespace-nowrap">
+              {config.adminSignatureText || 'Admin Department'}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Solid Absolute Bottom Ribbon Footer with skewed side accents based on mockup */}
-      <div className="absolute bottom-0 left-0 right-0 h-[36px] bg-[#0c2340] pointer-events-none select-none rounded-b-[32px] overflow-hidden flex items-center justify-between px-6 z-10">
-        
-        {/* Left Side slanted gold bar */}
-        <div className="absolute left-0 bottom-0 top-0 w-8 bg-gradient-to-r from-[#e2a812] to-amber-500 h-full origin-bottom-left -skew-x-[24deg] border-r border-[#0c2340]" />
+      {/* Solid footer with squared gold terminals */}
+      <div className="absolute bottom-0 left-0 right-0 h-[36px] bg-[#0c2340] border-t-[3px] border-[#e2a812] pointer-events-none select-none overflow-hidden flex items-center justify-between px-6 z-10" {...editorProps('front-footer')}>
+        <div className="absolute left-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
         
         {/* Center column footer metrics with gold icons */}
         <div className="w-full h-full flex items-center justify-center gap-10 font-sans z-10 mx-auto">
@@ -961,9 +1008,9 @@ export const IDCard: React.FC<IDCardProps> = ({ student, config, showBack = fals
           </div>
         </div>
 
-        {/* Right Side slanted gold bar */}
-        <div className="absolute right-0 bottom-0 top-0 w-8 bg-gradient-to-l from-[#e2a812] to-amber-500 h-full origin-bottom-right skew-x-[24deg] border-l border-[#0c2340]" />
+        <div className="absolute right-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
       </div>
+      {customLayers()}
 
     </div>
   );

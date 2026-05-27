@@ -1,7 +1,8 @@
 import { ASSET_BUCKET, supabase } from '../lib/supabase';
-import { CardConfig, Student } from '../types';
+import { CanvasElement, CardConfig, Student } from '../types';
 
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
+const ADMIN_SIGNATURE_SETTING_ID = '__template_admin_signature__';
 
 interface StudentRow {
   id: string;
@@ -24,6 +25,7 @@ interface StudentRow {
 interface ConfigRow {
   id: number;
   institution_logo_path: string | null;
+  admin_signature_text?: string | null;
   left_main_header: string;
   left_sub_header: string;
   right_main_header: string;
@@ -34,6 +36,47 @@ interface ConfigRow {
   back_contact_phone: string;
   back_contact_email: string;
   back_logo_label: string;
+  primary_color: string;
+  accent_color: string;
+  canvas_elements: CanvasElement[] | null;
+}
+
+function rectangularElements(elements: CanvasElement[] | null | undefined): CanvasElement[] {
+  if (!Array.isArray(elements)) return [];
+  return elements.map((element) => (
+    element.kind === 'circle'
+      ? { ...element, kind: 'rectangle', name: 'Custom box' }
+      : element
+  ));
+}
+
+function editableCanvasElements(elements: CanvasElement[] | null | undefined): CanvasElement[] {
+  return rectangularElements(elements).filter((element) => element.id !== ADMIN_SIGNATURE_SETTING_ID);
+}
+
+function storedCanvasElements(config: CardConfig): CanvasElement[] {
+  return [
+    ...editableCanvasElements(config.canvasElements),
+    {
+      id: ADMIN_SIGNATURE_SETTING_ID,
+      surface: 'student-front',
+      name: 'Admin signature setting',
+      kind: 'text',
+      x: 0,
+      y: 0,
+      rotation: 0,
+      scale: 1,
+      opacity: 0,
+      zIndex: -1,
+      hidden: true,
+      text: config.adminSignatureText.trim() || 'Admin Department'
+    }
+  ];
+}
+
+function configuredAdminSignature(row: ConfigRow): string {
+  const storedSetting = row.canvas_elements?.find((element) => element.id === ADMIN_SIGNATURE_SETTING_ID)?.text;
+  return row.admin_signature_text?.trim() || storedSetting?.trim() || 'Admin Department';
 }
 
 function toDisplayDate(date: string): string {
@@ -59,15 +102,20 @@ async function hydrateStudent(row: StudentRow): Promise<Student> {
     signedAssetUrl(row.signature_path)
   ]);
 
+  const oldIdMatch = row.id_number.match(/^(FL|BL)-(?:20)?(\d{2})-(?:OP-)?(\d{1,3})$/i);
+  const migratedIdNumber = oldIdMatch
+    ? `HMA/${oldIdMatch[1].toUpperCase()}/${row.card_designation === 'operator' ? 'TT' : 'FC'}/20${oldIdMatch[2]}/${oldIdMatch[3].padStart(6, '0')}`
+    : row.id_number;
+
   return {
     id: row.id,
     nic: row.nic,
     name: row.name,
-    idNumber: row.id_number,
+    idNumber: migratedIdNumber,
     grade: row.grade,
     course: row.course,
     issueDate: toDisplayDate(row.issue_date),
-    trainingCenter: row.training_center,
+    trainingCenter: row.training_center === 'Global Skills Institute' ? 'Jayalath Campus' : row.training_center,
     photo,
     photoPath: row.photo_path || undefined,
     signatureType: row.signature_type,
@@ -84,16 +132,26 @@ async function hydrateConfig(row: ConfigRow): Promise<CardConfig> {
   return {
     institutionLogo: await signedAssetUrl(row.institution_logo_path),
     institutionLogoPath: row.institution_logo_path || undefined,
+    adminSignatureText: configuredAdminSignature(row),
     leftMainHeader: row.left_main_header,
-    leftSubHeader: row.left_sub_header,
-    rightMainHeader: row.right_main_header,
-    rightSubHeader: row.right_sub_header,
+    leftSubHeader: row.left_sub_header === 'for Construction & Industrial Training'
+      ? 'Career Education & Training Institute'
+      : row.left_sub_header,
+    rightMainHeader: row.right_main_header === 'GLOBAL SKILLS' ? 'OFFICIAL ID' : row.right_main_header,
+    rightSubHeader: row.right_sub_header === 'INSTITUTE' ? 'CREDENTIAL' : row.right_sub_header,
     validityYears: row.validity_years,
-    backVerificationUrl: row.back_verification_url,
-    backAddress: row.back_address,
-    backContactPhone: row.back_contact_phone,
-    backContactEmail: row.back_contact_email,
-    backLogoLabel: row.back_logo_label
+    backVerificationUrl: row.back_verification_url === 'www.jayalathcampus.lk/verify'
+      ? 'jceti.com/verification'
+      : row.back_verification_url,
+    backAddress: row.back_address.includes('for Construction & Industrial Training')
+      ? row.back_address.replace('Jayalath Campus for Construction & Industrial Training', 'Jayalath Campus').replace('Industrial Training Road', 'Training Road')
+      : row.back_address,
+    backContactPhone: row.back_contact_phone === '+94 11 2 345 678' ? '070 2 503 503' : row.back_contact_phone,
+    backContactEmail: row.back_contact_email === '+94 77 123 4567' ? '011 7 503 503' : row.back_contact_email,
+    backLogoLabel: row.back_logo_label,
+    primaryColor: row.primary_color || '#0c2340',
+    accentColor: row.accent_color || '#e2a812',
+    canvasElements: editableCanvasElements(row.canvas_elements)
   };
 }
 
@@ -132,6 +190,26 @@ async function uploadDataUrl(studentId: string, kind: 'photo' | 'signature', dat
   }
 
   const path = `students/${studentId}/${kind}-${Date.now()}.${extensionForMimeType(asset.type)}`;
+  const { error } = await supabase.storage.from(ASSET_BUCKET).upload(path, asset, {
+    contentType: asset.type,
+    upsert: false
+  });
+  if (error) throw error;
+  return path;
+}
+
+async function uploadInstitutionLogo(dataUrl: string): Promise<string> {
+  const response = await fetch(dataUrl);
+  const asset = await response.blob();
+
+  if (!asset.type.startsWith('image/')) {
+    throw new Error('Only image files can be uploaded.');
+  }
+  if (asset.size > MAX_ASSET_BYTES) {
+    throw new Error('Images must be 5 MB or smaller.');
+  }
+
+  const path = `template/institution-logo-${Date.now()}.${extensionForMimeType(asset.type)}`;
   const { error } = await supabase.storage.from(ASSET_BUCKET).upload(path, asset, {
     contentType: asset.type,
     upsert: false
@@ -222,9 +300,20 @@ export async function deleteStudent(student: Student): Promise<void> {
 }
 
 export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {
+  let institutionLogoPath = config.institutionLogoPath || null;
+  let uploadedLogoPath: string | null = null;
+
+  if (!config.institutionLogo) {
+    institutionLogoPath = null;
+  } else if (config.institutionLogo.startsWith('data:')) {
+    institutionLogoPath = await uploadInstitutionLogo(config.institutionLogo);
+    uploadedLogoPath = institutionLogoPath;
+  }
+
   const row = {
     id: 1,
-    institution_logo_path: config.institutionLogoPath || null,
+    institution_logo_path: institutionLogoPath,
+    admin_signature_text: config.adminSignatureText.trim() || 'Admin Department',
     left_main_header: config.leftMainHeader,
     left_sub_header: config.leftSubHeader,
     right_main_header: config.rightMainHeader,
@@ -234,10 +323,29 @@ export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {
     back_address: config.backAddress,
     back_contact_phone: config.backContactPhone,
     back_contact_email: config.backContactEmail,
-    back_logo_label: config.backLogoLabel
+    back_logo_label: config.backLogoLabel,
+    primary_color: config.primaryColor,
+    accent_color: config.accentColor,
+    canvas_elements: storedCanvasElements(config)
   };
 
-  const { data, error } = await supabase.from('card_config').upsert(row).select('*').single();
-  if (error) throw error;
+  let { data, error } = await supabase.from('card_config').upsert(row).select('*').single();
+  if (error?.message?.includes("'admin_signature_text' column")) {
+    const { admin_signature_text: _omittedSignatureColumn, ...compatibleRow } = row;
+    const retry = await supabase.from('card_config').upsert(compatibleRow).select('*').single();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error) {
+    if (uploadedLogoPath) {
+      await supabase.storage.from(ASSET_BUCKET).remove([uploadedLogoPath]);
+    }
+    throw error;
+  }
+
+  if (config.institutionLogoPath && config.institutionLogoPath !== institutionLogoPath) {
+    await supabase.storage.from(ASSET_BUCKET).remove([config.institutionLogoPath]);
+  }
+
   return hydrateConfig(data as ConfigRow);
 }

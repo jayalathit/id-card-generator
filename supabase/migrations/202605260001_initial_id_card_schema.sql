@@ -31,14 +31,15 @@ create table if not exists public.students (
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists students_nic_unique_ci
-on public.students (lower(btrim(nic)));
+create unique index if not exists students_nic_designation_unique_ci
+on public.students (lower(btrim(nic)), card_designation);
 create unique index if not exists students_id_number_unique_ci
 on public.students (lower(btrim(id_number)));
 
 create table if not exists public.card_config (
   id smallint primary key default 1 check (id = 1),
   institution_logo_path text,
+  admin_signature_text text not null default 'Admin Department',
   left_main_header text not null,
   left_sub_header text not null,
   right_main_header text not null,
@@ -49,6 +50,9 @@ create table if not exists public.card_config (
   back_contact_phone text not null,
   back_contact_email text not null,
   back_logo_label text not null,
+  primary_color text not null default '#0c2340',
+  accent_color text not null default '#e2a812',
+  canvas_elements jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
 
@@ -158,6 +162,7 @@ drop function if exists public.is_staff();
 
 insert into public.card_config (
   id,
+  admin_signature_text,
   left_main_header,
   left_sub_header,
   right_main_header,
@@ -171,15 +176,16 @@ insert into public.card_config (
 )
 values (
   1,
+  'Admin Department',
   'JAYALATH CAMPUS',
-  'for Construction & Industrial Training',
-  'GLOBAL SKILLS',
-  'INSTITUTE',
+  'Career Education & Training Institute',
+  'OFFICIAL ID',
+  'CREDENTIAL',
   2,
-  'www.jayalathcampus.lk/verify',
-  E'Jayalath Campus for Construction & Industrial Training\nNo. 123, Industrial Training Road,\nKandana, Western Province, Sri Lanka.',
-  '+94 11 2 345 678',
-  '+94 77 123 4567',
+  'jceti.com/verification',
+  E'Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka.',
+  '070 2 503 503',
+  '011 7 503 503',
   'JAYALATH CAMPUS'
 )
 on conflict (id) do nothing;
@@ -190,18 +196,18 @@ insert into public.students (
 )
 values
   (
-    'student-1', '123456789V', 'John Perera', 'FL-2026-001', 'A',
-    'Forklift Operator Training', '2026-05-25', 'Global Skills Institute',
-    'typed', 'John Perera', 'student', 'forklift', 'Counterbalance Forklift / Class A'
+    'student-1', '123456789V', 'John Perera', 'HMA/FL/FC/2026/000001', '',
+    'Forklift Operator Training', '2026-05-25', 'Jayalath Campus',
+    'typed', 'Admin Department', 'student', 'forklift', 'Counterbalance Forklift / Class A'
   ),
   (
-    'student-2', '199524589V', 'Sanduni Jayasekara', 'BL-2026-002', 'A',
-    'Backhoe Loader Operator Training', '2026-05-26', 'Global Skills Institute',
-    'typed', 'S. Jayasekara', 'student', 'backhoe', 'JCB Backhoe Loader / Class A'
+    'student-2', '199524589V', 'Sanduni Jayasekara', 'HMA/BL/FC/2026/000002', '',
+    'Backhoe Loader Operator Training', '2026-05-26', 'Jayalath Campus',
+    'typed', 'Admin Department', 'student', 'backhoe', 'JCB Backhoe Loader / Class A'
   ),
   (
-    'student-3', '198948123V', 'Chamara Silva', 'FL-26-OP-01', 'B',
-    'Forklift Operator Certification', '2026-05-24', 'Global Skills Institute',
-    'typed', 'C. Silva', 'operator', 'forklift', 'Counterbalance Forklift / Class A'
+    'student-3', '198948123V', 'Chamara Silva', 'HMA/FL/TT/2026/000003', 'B',
+    'Forklift Operator Certification', '2026-05-24', 'Jayalath Campus',
+    'typed', 'Admin Department', 'operator', 'forklift', 'Counterbalance Forklift / Class A'
   )
 on conflict (id) do nothing;

@@ -23,18 +23,46 @@ export interface Student {
   equipmentClass?: string; // "Counterbalance Forklift / Class A" or "JCB Backhoe Loader / Class A"
 }
 
+export type TemplateSurface = 'student-front' | 'student-back' | 'operator-front' | 'operator-back';
+export type CanvasElementKind = 'builtin' | 'text' | 'rectangle' | 'circle';
+
+export interface CanvasElement {
+  id: string;
+  surface: TemplateSurface;
+  name: string;
+  kind: CanvasElementKind;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  rotation: number;
+  scale: number;
+  opacity: number;
+  zIndex: number;
+  hidden?: boolean;
+  text?: string;
+  fontSize?: number;
+  color?: string;
+  fill?: string;
+  borderColor?: string;
+}
+
 export interface CardConfig {
   institutionLogo?: string; // Signed Storage URL for a custom header logo
   institutionLogoPath?: string; // Private Supabase Storage object path
-  leftMainHeader: string; // "JAYALATH"
-  leftSubHeader: string; // "CAMPUS FOR CONSTRUCTION & INDUSTRIAL TRAINING CENTER"
-  rightMainHeader: string; // "GLOBAL SKILLS"
-  rightSubHeader: string; // "INSTITUTE"
+  adminSignatureText: string; // Default signature shown on student ID cards
+  leftMainHeader: string; // "JAYALATH CAMPUS"
+  leftSubHeader: string; // "CAREER EDUCATION & TRAINING INSTITUTE"
+  rightMainHeader: string; // "OFFICIAL ID"
+  rightSubHeader: string; // "CREDENTIAL"
   
   validityYears: number; // 2 by default
-  backVerificationUrl: string; // "www.globalskills.lk/verify"
-  backAddress: string; // "Global Skills Institute\nNo. 123, Skills Avenue,\nColombo 07, Sri Lanka."
-  backContactPhone: string; // "+94 XX XXX XXXX"
-  backContactEmail: string; // "info@globalskills.lk"
-  backLogoLabel: string; // "FAUGET HIGH SCHOOL" or empty to stick to Global Skills
+  backVerificationUrl: string; // "jceti.com/verification"
+  backAddress: string; // "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."
+  backContactPhone: string; // Primary telephone
+  backContactEmail: string; // Secondary telephone retained in legacy database column
+  backLogoLabel: string; // "JAYALATH CAMPUS"
+  primaryColor: string;
+  accentColor: string;
+  canvasElements: CanvasElement[];
 }
