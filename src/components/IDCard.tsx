@@ -63,6 +63,16 @@ export const IDCard: React.FC<IDCardProps> = ({
   const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
     ? 'Counterbalance Forklift / Class A'
     : 'JCB Backhoe Loader / Class A');
+  const [mainFieldCode = 'HMA', , trainingMethodCode = 'FC'] = String(student.idNumber || '').toUpperCase().split('/');
+  const courseCategory = ({
+    HMA: 'Heavy Machinery',
+    HCA: 'Health Care'
+  } as Record<string, string>)[mainFieldCode] || mainFieldCode;
+  const courseType = ({
+    FC: 'Full Course',
+    TT: 'Trade Test',
+    GAP: 'Gap Filling'
+  } as Record<string, string>)[trainingMethodCode] || trainingMethodCode;
   const surface = surfaceFor(card_designation, showBack);
   const layoutElements = config.canvasElements || [];
   const dragRef = useRef<{ id: string; pointerId: number; startX: number; startY: number; x: number; y: number } | null>(null);
@@ -917,7 +927,7 @@ export const IDCard: React.FC<IDCardProps> = ({
             </div>
           </div>
 
-          {/* Row 2: Equipment specialty type & Class */}
+          {/* Row 2: Selected programme classification */}
           <div className="flex items-center gap-3 py-[2px] border-b border-slate-100">
             <div className="w-7.5 h-7.5 bg-[#0c2340] border-[1.5px] border-[#e2a812] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-sm">
               <svg width="16" height="16" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -926,10 +936,10 @@ export const IDCard: React.FC<IDCardProps> = ({
             </div>
             <div className="flex flex-col leading-none">
               <span className="text-[6px] font-black text-slate-400 uppercase tracking-[0.12em] leading-none block">
-                {equipment_type === 'forklift' ? 'FORKLIFT TYPE / CLASS' : 'BACKHOE LOADER TYPE'}
+                COURSE TYPE / CATEGORY
               </span>
               <span className="text-[9.5px] font-black text-[#0c2340] block tracking-tight whitespace-nowrap max-w-[244px] mt-[4px] uppercase">
-                {String(equipment_class).toUpperCase()}
+                {`${courseCategory} / ${courseType}`.toUpperCase()}
               </span>
             </div>
           </div>

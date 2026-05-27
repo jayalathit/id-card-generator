@@ -16,6 +16,11 @@ import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
 
 type TrainingMethod = 'FC' | 'TT' | 'GAP';
 
+const MAIN_FIELD_OPTIONS = [
+  { code: 'HMA', label: 'Heavy Machinery', enabled: true },
+  { code: 'HCA', label: 'Health Care (courses coming soon)', enabled: false }
+];
+
 function specialtyCode(equipmentType: 'forklift' | 'backhoe'): string {
   return equipmentType === 'forklift' ? 'FL' : 'BL';
 }
@@ -931,15 +936,17 @@ export default function App() {
                 <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
                   <span className="font-bold text-[10px] text-natural-darktext uppercase tracking-wider">{formCardDesignation === 'operator' ? 'Operator ID Composition' : 'Student ID Composition'}</span>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Main Field
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Category
                       <select value={formMainField} onChange={(e) => setFormMainField(e.target.value)} className="border border-natural-darkborder p-1.5 text-xs text-natural-darktext bg-white">
-                        <option value="HMA">HMA - Heavy Machinery</option>
+                        {MAIN_FIELD_OPTIONS.map((field) => (
+                          <option key={field.code} value={field.code} disabled={!field.enabled}>{field.code} - {field.label}</option>
+                        ))}
                       </select>
                     </label>
                     <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Sub Field
                       <input value={specialtyCode(formEquipmentType)} readOnly className="border border-natural-border bg-natural-panel p-1.5 text-xs text-natural-darktext font-bold" />
                     </label>
-                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Training
+                    <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Course Type
                       <select value={formTrainingMethod} onChange={(e) => setFormTrainingMethod(e.target.value as TrainingMethod)} className="border border-natural-darkborder p-1.5 text-xs text-natural-darktext bg-white">
                         <option value="FC">FC - Full Course</option>
                         <option value="TT">TT - Trade Test</option>
