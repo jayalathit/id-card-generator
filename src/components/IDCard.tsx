@@ -877,9 +877,9 @@ export const IDCard: React.FC<IDCardProps> = ({
         {/* Upper Logo Area */}
         <div className="flex justify-between items-center gap-3">
           
-          {/* Institution Logo Box with golden border */}
-          <div className="w-[78px] h-[78px] border-[2px] border-[#e2a812] bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
-            <BrandLogo size={72} />
+          {/* Institution logo */}
+          <div className="w-[78px] h-[78px] flex items-center justify-center overflow-hidden flex-shrink-0">
+            <BrandLogo size={78} />
           </div>
 
           {/* Institution Names Column */}
