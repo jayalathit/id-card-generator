@@ -6,6 +6,7 @@
 import React, { CSSProperties, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { CanvasElement, CardConfig, Student, TemplateSurface } from '../types';
+import jayalathWordmarkUrl from '../assets/jayalath-wordmark.png';
 import { baseCanvasElement, getCanvasElement, surfaceFor, TEMPLATE_LAYERS } from '../designLayers';
 import { 
   User, 
@@ -44,6 +45,49 @@ function verificationUrl(configuredUrl: string, idNumber: string): string {
   } catch {
     return `https://example.invalid/verify?id=${encodeURIComponent(idNumber)}`;
   }
+}
+
+function JayalathCampusHeadline({
+  label,
+  variant,
+  align = 'left',
+  className = '',
+  wordmarkClassName = '',
+  campusClassName = ''
+}: {
+  label: string;
+  variant: 'dark' | 'light';
+  align?: 'left' | 'right';
+  className?: string;
+  wordmarkClassName?: string;
+  campusClassName?: string;
+}) {
+  const title = label.trim() || 'JAYALATH CAMPUS';
+  const match = title.match(/^jayalath\b/i);
+  const titleColor = variant === 'light' ? 'text-white' : 'text-[#0c2340]';
+
+  if (!match) {
+    return (
+      <span className={`font-sans font-black uppercase leading-none tracking-tight ${titleColor} ${className}`}>
+        {title}
+      </span>
+    );
+  }
+
+  const remainder = title.slice(match[0].length).trim() || 'CAMPUS';
+  const justify = align === 'right' ? 'justify-end text-right' : 'justify-start text-left';
+
+  return (
+    <span className={`font-sans font-black uppercase leading-none tracking-tight ${titleColor} flex items-end gap-1.5 ${justify} ${className}`}>
+      <img
+        src={jayalathWordmarkUrl}
+        alt="JAYALATH"
+        className={`block object-contain ${wordmarkClassName}`}
+        draggable={false}
+      />
+      {remainder && <span className={`leading-none ${campusClassName}`}>{remainder}</span>}
+    </span>
+  );
 }
 
 export const IDCard: React.FC<IDCardProps> = ({
@@ -442,9 +486,13 @@ export const IDCard: React.FC<IDCardProps> = ({
                 <BrandLogo size={52} />
               </div>
               <div className="flex flex-col text-left pl-3.5">
-                <span className="font-sans font-extrabold text-[23px] text-[#0c2340] leading-none tracking-tight">
-                  {templateDetails.leftMainHeader || 'JAYALATH CAMPUS'}
-                </span>
+                <JayalathCampusHeadline
+                  label={templateDetails.leftMainHeader || 'JAYALATH CAMPUS'}
+                  variant="dark"
+                  className="text-[23px]"
+                  wordmarkClassName="h-[28px] w-auto"
+                  campusClassName="text-[23px]"
+                />
                 <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
                   {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
                 </span>
@@ -826,9 +874,14 @@ export const IDCard: React.FC<IDCardProps> = ({
 
           {/* Institution Names Column */}
           <div className="flex-1 text-right pr-1">
-            <span className="font-sans font-black text-[22px] tracking-tight text-white block uppercase leading-none text-right">
-              {templateDetails.leftMainHeader || "JAYALATH CAMPUS"}
-            </span>
+            <JayalathCampusHeadline
+              label={templateDetails.leftMainHeader || "JAYALATH CAMPUS"}
+              variant="light"
+              align="right"
+              className="text-[22px]"
+              wordmarkClassName="h-[27px] w-auto"
+              campusClassName="text-[22px]"
+            />
             <span className="font-sans font-extrabold text-[7.5px] text-[#e2a812] uppercase tracking-wide block mt-[3px] leading-tight text-right">
               {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
             </span>
