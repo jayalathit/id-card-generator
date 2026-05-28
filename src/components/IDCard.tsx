@@ -341,10 +341,13 @@ export const IDCard: React.FC<IDCardProps> = ({
               <div className="w-9 h-9 flex items-center justify-center">
                 <BrandLogo size={34} />
               </div>
-              <div className="flex flex-col leading-none text-left">
-                <span className="font-sans font-black text-[12px] text-[#0c2340] tracking-wider uppercase leading-none">
-                  JAYALATH
-                </span>
+              <div className="flex flex-col leading-none text-left min-w-[72px]">
+                <img
+                  src={jayalathWordmarkUrl}
+                  alt="JAYALATH"
+                  className="h-[15px] w-auto max-w-[82px] object-contain object-left"
+                  draggable={false}
+                />
                 <span className="text-[7.5px] font-extrabold text-slate-500 tracking-widest uppercase mt-[2.5px] leading-none">
                   CAMPUS
                 </span>
@@ -353,27 +356,32 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Central content splitting columns */}
-          <div className="relative z-10 grid grid-cols-12 gap-5 items-stretch mt-[15px] px-1">
+          <div className="relative z-10 grid grid-cols-12 gap-5 items-start mt-[18px] px-1">
             {/* Left side details */}
-            <div className="col-span-6 flex flex-col gap-[18px]" {...editorProps('back-statement')}>
-              <div className="flex items-start gap-3">
-                <div className="w-7.5 h-7.5 bg-[#0c2340] rounded-full flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-850">
+            <div className="col-span-7 flex flex-col gap-3" {...editorProps('back-statement')}>
+              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#0c2340] bg-slate-50/80 px-3 py-3 min-h-[72px]">
+                <div className="w-[30px] h-[30px] bg-[#0c2340] flex items-center justify-center text-white flex-shrink-0 shadow-sm">
                   <ShieldCheck size={15} className="stroke-[2.5]" />
                 </div>
-                <p className="text-[10px] font-semibold text-slate-600 leading-normal text-left">
-                  This card is an official identification for authorized heavy equipment operators only. It is non-transferable and must be carried while on duty.
-                </p>
+                <div className="text-left">
+                  <span className="text-[8px] font-black text-[#0c2340] tracking-[0.18em] uppercase leading-none block">
+                    Authorized Operator Credential
+                  </span>
+                  <p className="text-[9.6px] font-semibold text-slate-600 leading-[1.45] mt-2 max-w-[270px]">
+                    This card is an official identification for authorized heavy equipment operators only. It is non-transferable and must be carried while on duty.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="w-7.5 h-7.5 bg-amber-50 rounded-full flex items-center justify-center text-[#e2a812] flex-shrink-0 shadow border border-amber-100">
+              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-3 min-h-[66px] shadow-sm">
+                <div className="w-[30px] h-[30px] bg-[#e2a812] flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
                   <Calendar size={15} className="stroke-[2.5]" />
                 </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-[9.5px] font-black text-[#e2a812] uppercase tracking-wider leading-none">
+                <div className="text-left">
+                  <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
                     VALIDITY
                   </span>
-                  <p className="text-[10px] font-semibold text-slate-600 leading-normal mt-[3px]">
+                  <p className="text-[9.6px] font-semibold text-slate-600 leading-[1.45] mt-2 max-w-[270px]">
                     This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{templateDetails.validityYears} YEAR{templateDetails.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
                 </div>
@@ -381,54 +389,56 @@ export const IDCard: React.FC<IDCardProps> = ({
             </div>
 
             {/* Right side verification */}
-            <div className="col-span-6 flex flex-col justify-start items-center" {...editorProps('back-verify')}>
-              <div className="bg-[#0c2340] text-center text-white rounded-lg py-[4px] px-6 text-[8px] font-black tracking-widest uppercase mb-1.5 w-[190px] shadow border border-slate-800">
-                VERIFY OPERATOR DETAILS
-              </div>
-              
-              <div className="bg-white border-2 border-slate-200 p-1.5 rounded-2xl shadow-md w-[114px] h-[114px] flex items-center justify-center">
-                {backQrUrl ? (
-                  <img src={backQrUrl} alt="Back Verification Qr code" className="w-[102px] h-[102px] object-contain" />
-                ) : (
-                  <div className="w-full h-full bg-slate-100 rounded" />
-                )}
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-1.5 px-3 flex items-center gap-2 max-w-[230px] w-full mt-2.5 shadow-inner">
-                <Globe size={13} className="text-[#0c2340] flex-shrink-0" />
-                <div className="flex flex-col leading-none text-left min-w-0">
-                  <span className="text-[7.5px] font-bold text-gray-400 uppercase leading-none pb-[2px] block">
-                    Website verification
-                  </span>
-                  <span className="text-[8px] font-extrabold text-[#e2a812] tracking-wide block break-all leading-snug select-all">
-                    {templateDetails.backVerificationUrl}
-                  </span>
+            <div className="col-span-5 flex justify-end" {...editorProps('back-verify')}>
+              <div className="w-[205px] border border-slate-200 bg-white shadow-sm">
+                <div className="h-[28px] bg-[#0c2340] flex items-center justify-center text-white text-[8px] font-black tracking-[0.2em] uppercase border-b-[3px] border-[#e2a812]">
+                  Verify Operator
+                </div>
+                <div className="p-3 flex flex-col items-center">
+                  <div className="bg-white border border-slate-300 p-1.5 w-[112px] h-[112px] flex items-center justify-center">
+                    {backQrUrl ? (
+                      <img src={backQrUrl} alt="Back Verification Qr code" className="w-[102px] h-[102px] object-contain" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-100" />
+                    )}
+                  </div>
+                  <div className="mt-3 w-full border-t border-slate-100 pt-2 flex items-start gap-2">
+                    <Globe size={13} className="text-[#e2a812] flex-shrink-0 mt-[1px]" />
+                    <div className="flex flex-col leading-none text-left min-w-0">
+                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none block">
+                        Website verification
+                      </span>
+                      <span className="text-[8px] font-extrabold text-[#0c2340] tracking-wide block break-all leading-snug select-all mt-1">
+                        {templateDetails.backVerificationUrl}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Footer Contacts Row */}
-          <div className="relative z-10 grid grid-cols-3 gap-3 border-t border-gray-200 pt-[10px] px-1 mt-auto pb-4" {...editorProps('back-contact')}>
+          <div className="relative z-10 grid grid-cols-[1.45fr_1fr_1fr] gap-0 border-t border-gray-200 mt-auto mb-[18px]" {...editorProps('back-contact')}>
             {/* Column 1 Address */}
-            <div className="flex items-start gap-2">
-              <MapPin size={12} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
+            <div className="flex items-start gap-2 pt-[10px] pr-3">
+              <MapPin size={12} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">ADDRESS</strong>
                 <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{templateDetails.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."}</p>
               </div>
             </div>
             {/* Column 2 Contact */}
-            <div className="flex items-start gap-2 border-x border-gray-200 px-2">
-              <Phone size={11} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
+            <div className="flex items-start gap-2 border-x border-gray-200 pt-[10px] px-3">
+              <Phone size={11} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
                 <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{templateDetails.backContactPhone || "070 2 503 503"}<br/>{templateDetails.backContactEmail || "011 7 503 503"}</p>
               </div>
             </div>
             {/* Column 3 Envelope */}
-            <div className="flex items-start gap-2">
-              <Mail size={12} className="text-[#0c2340] mt-[1.5px] flex-shrink-0" />
+            <div className="flex items-start gap-2 pt-[10px] pl-3">
+              <Mail size={12} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">IN CASE FOUND</strong>
                 <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-normal">Please return to the address or contact number provided.</p>
@@ -518,9 +528,9 @@ export const IDCard: React.FC<IDCardProps> = ({
             {/* Left side parameters list */}
             <div className="col-span-8 flex flex-col gap-3" {...editorProps('front-details')}>
               {/* Title zone: Machine logo box + Heavy operator title labels */}
-              <div className="flex items-center gap-3 text-left">
+              <div className="flex items-center text-left w-[300px] h-[54px] bg-white border border-slate-200 shadow-sm">
                 {/* Visual indicator card */}
-                <div className="w-[42px] h-[42px] bg-sky-50 border border-sky-100 flex-shrink-0 flex items-center justify-center p-1.5 rounded-xl shadow-sm text-[#0c2340]">
+                <div className="w-[52px] h-full bg-slate-50 border-r-[3px] border-[#e2a812] flex-shrink-0 flex items-center justify-center text-[#0c2340]">
                   {equipment_type === 'forklift' ? (
                     <svg width="32" height="32" viewBox="0 0 100 100" fill="currentColor" className="w-8 h-8">
                       <path d="M12 65 h40 l10 -15 h15 v12 h-10 v15 h-55 z" />
@@ -543,11 +553,11 @@ export const IDCard: React.FC<IDCardProps> = ({
                   )}
                 </div>
                 
-                <div className="flex flex-col leading-none">
-                  <span className="font-sans font-black text-[21px] text-[#0c2340] tracking-tight uppercase">
+                <div className="flex flex-col justify-center leading-none pl-4 pr-3 flex-1">
+                  <span className="font-sans font-black text-[21px] text-[#0c2340] tracking-tight uppercase leading-none">
                     {equipment_type === 'forklift' ? 'FORKLIFT' : 'BACKHOE LOADER'}
                   </span>
-                  <span className="font-sans font-black text-[18px] text-[#e2a812] tracking-wider uppercase mt-[2px] leading-none">
+                  <span className="font-sans font-black text-[18px] text-[#e2a812] tracking-[0.08em] uppercase mt-[4px] leading-none">
                     OPERATOR ID
                   </span>
                 </div>
