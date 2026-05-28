@@ -269,7 +269,7 @@ export const IDCard: React.FC<IDCardProps> = ({
         src={config.institutionLogo}
         alt="Jayalath Campus logo"
         style={{ width: size, height: size }}
-        className="object-contain p-1"
+        className="object-contain"
       />
     ) : (
       <CampusMark size={size} />
@@ -869,7 +869,7 @@ export const IDCard: React.FC<IDCardProps> = ({
           
           {/* Institution Logo Box with golden border */}
           <div className="w-[78px] h-[78px] border-[2px] border-[#e2a812] bg-white rounded-2xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
-            <BrandLogo size={54} />
+            <BrandLogo size={72} />
           </div>
 
           {/* Institution Names Column */}
