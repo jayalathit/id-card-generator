@@ -47,16 +47,11 @@ function verificationUrl(configuredUrl: string, idNumber: string): string {
   }
 }
 
-function gradeDescription(grade: string): string {
-  const normalized = grade.trim().toUpperCase();
-  const gradeMarks: Record<string, string> = {
-    A: '85-100 marks',
-    B: '70-84 marks',
-    C: '55-69 marks'
-  };
-
-  return gradeMarks[normalized] || 'Marks updated by admin';
-}
+const OPERATOR_GRADE_GUIDE = [
+  { grade: 'A', marks: '85-100 marks', label: 'Advanced competency' },
+  { grade: 'B', marks: '70-84 marks', label: 'Professional competency' },
+  { grade: 'C', marks: '55-69 marks', label: 'Operational competency' }
+];
 
 function JayalathCampusHeadline({
   label,
@@ -119,7 +114,6 @@ export const IDCard: React.FC<IDCardProps> = ({
   const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
     ? 'Counterbalance Forklift / Class A'
     : 'JCB Backhoe Loader / Class A');
-  const operatorGrade = (student.grade || 'A').trim().toUpperCase();
   const [mainFieldCode = 'HMA', , trainingMethodCode = 'FC'] = String(student.idNumber || '').toUpperCase().split('/');
   const courseCategory = ({
     HMA: 'Heavy Machinery',
@@ -239,6 +233,7 @@ export const IDCard: React.FC<IDCardProps> = ({
     height,
     minWidth: width,
     minHeight: height,
+    boxSizing: 'border-box',
     '--card-primary': config.primaryColor || '#0c2340',
     '--card-accent': config.accentColor || '#e2a812'
   } as CSSProperties);
@@ -368,10 +363,10 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Central content splitting columns */}
-          <div className="relative z-10 grid grid-cols-12 gap-5 items-start mt-[18px] px-1">
+          <div className="relative z-10 grid grid-cols-12 gap-5 items-start mt-[14px] px-1">
             {/* Left side details */}
-            <div className="col-span-7 flex flex-col gap-3" {...editorProps('back-statement')}>
-              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#0c2340] bg-slate-50/80 px-3 py-3 min-h-[72px]">
+            <div className="col-span-7 flex flex-col gap-2.5" {...editorProps('back-statement')}>
+              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#0c2340] bg-slate-50/80 px-3 py-2.5 min-h-[64px]">
                 <div className="w-[30px] h-[30px] bg-[#0c2340] flex items-center justify-center text-white flex-shrink-0 shadow-sm">
                   <ShieldCheck size={15} className="stroke-[2.5]" />
                 </div>
@@ -379,28 +374,43 @@ export const IDCard: React.FC<IDCardProps> = ({
                   <span className="text-[8px] font-black text-[#0c2340] tracking-[0.18em] uppercase leading-none block">
                     Authorized Operator Credential
                   </span>
-                  <p className="text-[9.6px] font-semibold text-slate-600 leading-[1.45] mt-2 max-w-[270px]">
+                  <p className="text-[9.2px] font-semibold text-slate-600 leading-[1.35] mt-1.5 max-w-[270px]">
                     This card is an official identification for authorized heavy equipment operators only. It is non-transferable and must be carried while on duty.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-3 min-h-[84px] shadow-sm">
+              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-2.5 min-h-[58px] shadow-sm">
                 <div className="w-[30px] h-[30px] bg-[#e2a812] flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
                   <Calendar size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
-                      VALIDITY
-                    </span>
-                    <span className="text-[8px] font-black text-[#0c2340] uppercase tracking-wider bg-slate-100 px-2 py-1 leading-none">
-                      Grade {operatorGrade}: {gradeDescription(operatorGrade)}
-                    </span>
-                  </div>
-                  <p className="text-[9.4px] font-semibold text-slate-600 leading-[1.42] mt-2 max-w-[270px]">
+                  <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
+                    VALIDITY
+                  </span>
+                  <p className="text-[9.2px] font-semibold text-slate-600 leading-[1.35] mt-1.5 max-w-[270px]">
                     This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{templateDetails.validityYears} YEAR{templateDetails.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-slate-300 bg-white px-3 py-2.5 shadow-sm">
+                <div className="w-[30px] h-[30px] bg-slate-100 flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
+                  <Award size={15} className="stroke-[2.5]" />
+                </div>
+                <div className="text-left">
+                  <span className="text-[8px] font-black text-[#0c2340] uppercase tracking-[0.18em] leading-none block">
+                    Grade Classification Guide
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5 mt-2">
+                    {OPERATOR_GRADE_GUIDE.map((item) => (
+                      <div key={item.grade} className="border border-slate-200 bg-slate-50 px-1.5 py-1.5 min-h-[39px]">
+                        <span className="text-[10px] font-black text-[#0c2340] leading-none block">Grade {item.grade}</span>
+                        <span className="text-[7.2px] font-black text-[#e2a812] uppercase leading-none block mt-1">{item.marks}</span>
+                        <span className="text-[6.5px] font-bold text-slate-500 uppercase leading-none block mt-1">{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

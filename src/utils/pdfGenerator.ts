@@ -19,6 +19,7 @@ function mountCaptureCopy(source: HTMLElement, width: number, height: number, to
     top: `${top}px`,
     width: `${width}px`,
     height: `${height}px`,
+    boxSizing: 'border-box',
     overflow: 'hidden',
     opacity: '1',
     visibility: 'visible',
@@ -34,6 +35,7 @@ function mountCaptureCopy(source: HTMLElement, width: number, height: number, to
   Object.assign(element.style, {
     width: `${width}px`,
     height: `${height}px`,
+    boxSizing: 'border-box',
     opacity: '1',
     visibility: 'visible',
     transform: 'none'
