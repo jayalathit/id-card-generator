@@ -64,6 +64,8 @@ export interface CardConfig {
   institutionLogo?: string; // Signed Storage URL for a custom header logo
   institutionLogoPath?: string; // Private Supabase Storage object path
   adminSignatureText: string; // Default signature shown on student ID cards
+  adminSignatureImage?: string; // Data URL or signed Storage URL for student admin signature
+  adminSignaturePath?: string; // Private Supabase Storage object path
   leftMainHeader: string; // "JAYALATH CAMPUS"
   leftSubHeader: string; // "CAREER EDUCATION & TRAINING INSTITUTE"
   rightMainHeader: string; // "OFFICIAL ID"

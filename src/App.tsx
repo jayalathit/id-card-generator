@@ -441,6 +441,22 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  const handleAdminSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      alert('Please choose a PNG, JPG, or WebP signature smaller than 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setConfig((previous) => ({ ...previous, adminSignatureImage: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Save Operator Record
   const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1526,7 +1542,7 @@ export default function App() {
                 {templateCardDesignation === 'student' && (
                 <div className="border border-natural-border bg-white p-3 flex flex-col gap-2">
                   <span className="font-bold text-[10.5px] text-natural-darktext uppercase tracking-wider">Admin Department Signature</span>
-                  <span className="text-[9px] font-semibold text-natural-muted">Default authorized signature shown on student ID designs.</span>
+                  <span className="text-[9px] font-semibold text-natural-muted">Default authorized signature shown on student ID designs. Type a label or upload a transparent PNG signature.</span>
                   <input
                     type="text"
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage"
@@ -1534,9 +1550,32 @@ export default function App() {
                     onChange={(e) => setConfig((previous) => ({ ...previous, adminSignatureText: e.target.value }))}
                     placeholder="Admin Department"
                   />
-                  <span className="font-formal-sig text-[28px] text-[#0c2340] leading-none min-h-8">
-                    {config.adminSignatureText.trim() || 'Admin Department'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-28 h-12 border border-natural-border bg-natural-panel flex items-center justify-center overflow-hidden">
+                      {config.adminSignatureImage ? (
+                        <img src={config.adminSignatureImage} alt="Admin signature preview" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <span className="font-formal-sig text-[24px] text-[#0c2340] leading-none">
+                          {config.adminSignatureText.trim() || 'Admin Department'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="inline-flex items-center gap-1 border border-natural-darkborder bg-natural-panel px-3 py-1.5 text-[9px] font-bold uppercase text-natural-darktext cursor-pointer hover:bg-natural-sand">
+                        <Upload className="w-3 h-3" /> Upload PNG
+                        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAdminSignatureUpload} className="hidden" />
+                      </label>
+                      {config.adminSignatureImage && (
+                        <button
+                          type="button"
+                          onClick={() => setConfig((previous) => ({ ...previous, adminSignatureImage: undefined }))}
+                          className="text-[9px] font-bold uppercase text-red-600 text-left"
+                        >
+                          Remove signature
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 )}
 

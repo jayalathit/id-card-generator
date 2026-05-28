@@ -3,6 +3,7 @@ import { CanvasElement, CardConfig, Student, TemplateDetails } from '../types';
 
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 const ADMIN_SIGNATURE_SETTING_ID = '__template_admin_signature__';
+const ADMIN_SIGNATURE_PATH_SETTING_ID = '__template_admin_signature_path__';
 const STUDENT_DETAILS_SETTING_ID = '__template_student_details__';
 const OPERATOR_DETAILS_SETTING_ID = '__template_operator_details__';
 
@@ -55,6 +56,7 @@ function rectangularElements(elements: CanvasElement[] | null | undefined): Canv
 function editableCanvasElements(elements: CanvasElement[] | null | undefined): CanvasElement[] {
   return rectangularElements(elements).filter((element) => ![
     ADMIN_SIGNATURE_SETTING_ID,
+    ADMIN_SIGNATURE_PATH_SETTING_ID,
     STUDENT_DETAILS_SETTING_ID,
     OPERATOR_DETAILS_SETTING_ID
   ].includes(element.id));
@@ -81,6 +83,7 @@ function storedCanvasElements(config: CardConfig): CanvasElement[] {
   return [
     ...editableCanvasElements(config.canvasElements),
     settingsElement(ADMIN_SIGNATURE_SETTING_ID, config.adminSignatureText.trim() || 'Admin Department'),
+    ...(config.adminSignaturePath ? [settingsElement(ADMIN_SIGNATURE_PATH_SETTING_ID, config.adminSignaturePath)] : []),
     settingsElement(STUDENT_DETAILS_SETTING_ID, JSON.stringify(config.studentDetails)),
     settingsElement(OPERATOR_DETAILS_SETTING_ID, JSON.stringify(config.operatorDetails))
   ];
@@ -89,6 +92,10 @@ function storedCanvasElements(config: CardConfig): CanvasElement[] {
 function configuredAdminSignature(row: ConfigRow): string {
   const storedSetting = row.canvas_elements?.find((element) => element.id === ADMIN_SIGNATURE_SETTING_ID)?.text;
   return row.admin_signature_text?.trim() || storedSetting?.trim() || 'Admin Department';
+}
+
+function configuredAdminSignaturePath(row: ConfigRow): string | undefined {
+  return row.canvas_elements?.find((element) => element.id === ADMIN_SIGNATURE_PATH_SETTING_ID)?.text?.trim() || undefined;
 }
 
 function legacyDetails(row: ConfigRow): TemplateDetails {
@@ -175,10 +182,13 @@ async function hydrateConfig(row: ConfigRow): Promise<CardConfig> {
   const legacy = legacyDetails(row);
   const studentDetails = storedDetails(row, STUDENT_DETAILS_SETTING_ID, legacy);
   const operatorDetails = storedDetails(row, OPERATOR_DETAILS_SETTING_ID, legacy);
+  const adminSignaturePath = configuredAdminSignaturePath(row);
   return {
     institutionLogo: await signedAssetUrl(row.institution_logo_path),
     institutionLogoPath: row.institution_logo_path || undefined,
     adminSignatureText: configuredAdminSignature(row),
+    adminSignatureImage: await signedAssetUrl(adminSignaturePath),
+    adminSignaturePath,
     ...studentDetails,
     primaryColor: row.primary_color || '#0c2340',
     accentColor: row.accent_color || '#e2a812',
@@ -243,6 +253,26 @@ async function uploadInstitutionLogo(dataUrl: string): Promise<string> {
   }
 
   const path = `template/institution-logo-${Date.now()}.${extensionForMimeType(asset.type)}`;
+  const { error } = await supabase.storage.from(ASSET_BUCKET).upload(path, asset, {
+    contentType: asset.type,
+    upsert: false
+  });
+  if (error) throw error;
+  return path;
+}
+
+async function uploadTemplateSignature(dataUrl: string): Promise<string> {
+  const response = await fetch(dataUrl);
+  const asset = await response.blob();
+
+  if (!asset.type.startsWith('image/')) {
+    throw new Error('Only image files can be uploaded.');
+  }
+  if (asset.size > MAX_ASSET_BYTES) {
+    throw new Error('Images must be 5 MB or smaller.');
+  }
+
+  const path = `template/admin-signature-${Date.now()}.${extensionForMimeType(asset.type)}`;
   const { error } = await supabase.storage.from(ASSET_BUCKET).upload(path, asset, {
     contentType: asset.type,
     upsert: false
@@ -334,13 +364,28 @@ export async function deleteStudent(student: Student): Promise<void> {
 
 export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {
   let institutionLogoPath = config.institutionLogoPath || null;
+  let adminSignaturePath = config.adminSignaturePath || null;
   let uploadedLogoPath: string | null = null;
+  let uploadedSignaturePath: string | null = null;
 
-  if (!config.institutionLogo) {
-    institutionLogoPath = null;
-  } else if (config.institutionLogo.startsWith('data:')) {
-    institutionLogoPath = await uploadInstitutionLogo(config.institutionLogo);
-    uploadedLogoPath = institutionLogoPath;
+  try {
+    if (!config.institutionLogo) {
+      institutionLogoPath = null;
+    } else if (config.institutionLogo.startsWith('data:')) {
+      institutionLogoPath = await uploadInstitutionLogo(config.institutionLogo);
+      uploadedLogoPath = institutionLogoPath;
+    }
+
+    if (!config.adminSignatureImage) {
+      adminSignaturePath = null;
+    } else if (config.adminSignatureImage.startsWith('data:')) {
+      adminSignaturePath = await uploadTemplateSignature(config.adminSignatureImage);
+      uploadedSignaturePath = adminSignaturePath;
+    }
+  } catch (error) {
+    const uploadedPaths = [uploadedLogoPath, uploadedSignaturePath].filter((path): path is string => Boolean(path));
+    if (uploadedPaths.length) await supabase.storage.from(ASSET_BUCKET).remove(uploadedPaths);
+    throw error;
   }
 
   const row = {
@@ -359,7 +404,7 @@ export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {
     back_logo_label: config.studentDetails.backLogoLabel,
     primary_color: config.primaryColor,
     accent_color: config.accentColor,
-    canvas_elements: storedCanvasElements(config)
+    canvas_elements: storedCanvasElements({ ...config, institutionLogoPath: institutionLogoPath || undefined, adminSignaturePath: adminSignaturePath || undefined })
   };
 
   let { data, error } = await supabase.from('card_config').upsert(row).select('*').single();
@@ -370,14 +415,16 @@ export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {
     error = retry.error;
   }
   if (error) {
-    if (uploadedLogoPath) {
-      await supabase.storage.from(ASSET_BUCKET).remove([uploadedLogoPath]);
-    }
+    const uploadedPaths = [uploadedLogoPath, uploadedSignaturePath].filter((path): path is string => Boolean(path));
+    if (uploadedPaths.length) await supabase.storage.from(ASSET_BUCKET).remove(uploadedPaths);
     throw error;
   }
 
   if (config.institutionLogoPath && config.institutionLogoPath !== institutionLogoPath) {
     await supabase.storage.from(ASSET_BUCKET).remove([config.institutionLogoPath]);
+  }
+  if (config.adminSignaturePath && config.adminSignaturePath !== adminSignaturePath) {
+    await supabase.storage.from(ASSET_BUCKET).remove([config.adminSignaturePath]);
   }
 
   return hydrateConfig(data as ConfigRow);

@@ -47,6 +47,17 @@ function verificationUrl(configuredUrl: string, idNumber: string): string {
   }
 }
 
+function gradeDescription(grade: string): string {
+  const normalized = grade.trim().toUpperCase();
+  const gradeMarks: Record<string, string> = {
+    A: '85-100 marks',
+    B: '70-84 marks',
+    C: '55-69 marks'
+  };
+
+  return gradeMarks[normalized] || 'Marks updated by admin';
+}
+
 function JayalathCampusHeadline({
   label,
   variant,
@@ -108,6 +119,7 @@ export const IDCard: React.FC<IDCardProps> = ({
   const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
     ? 'Counterbalance Forklift / Class A'
     : 'JCB Backhoe Loader / Class A');
+  const operatorGrade = (student.grade || 'A').trim().toUpperCase();
   const [mainFieldCode = 'HMA', , trainingMethodCode = 'FC'] = String(student.idNumber || '').toUpperCase().split('/');
   const courseCategory = ({
     HMA: 'Heavy Machinery',
@@ -373,15 +385,20 @@ export const IDCard: React.FC<IDCardProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-3 min-h-[66px] shadow-sm">
+              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-3 min-h-[84px] shadow-sm">
                 <div className="w-[30px] h-[30px] bg-[#e2a812] flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
                   <Calendar size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
-                  <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
-                    VALIDITY
-                  </span>
-                  <p className="text-[9.6px] font-semibold text-slate-600 leading-[1.45] mt-2 max-w-[270px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
+                      VALIDITY
+                    </span>
+                    <span className="text-[8px] font-black text-[#0c2340] uppercase tracking-wider bg-slate-100 px-2 py-1 leading-none">
+                      Grade {operatorGrade}: {gradeDescription(operatorGrade)}
+                    </span>
+                  </div>
+                  <p className="text-[9.4px] font-semibold text-slate-600 leading-[1.42] mt-2 max-w-[270px]">
                     This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{templateDetails.validityYears} YEAR{templateDetails.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
                 </div>
@@ -590,9 +607,9 @@ export const IDCard: React.FC<IDCardProps> = ({
             </div>
 
             {/* Right side portrait photo, signature */}
-            <div className="col-span-4 flex flex-col items-center pl-1 shrink-0" {...editorProps('front-photo')}>
+            <div className="col-span-4 flex flex-col items-center pl-2 shrink-0" {...editorProps('front-photo')}>
               {/* Slate dark blue outline border enclosing custom photo */}
-              <div className="border-[2px] border-[#0c2340] rounded-[28px] w-[155px] h-[190px] bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center shadow-md">
+              <div className="border-[2px] border-[#0c2340] w-[156px] h-[190px] bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center shadow-md">
                 {student.photo ? (
                   <img src={student.photo} alt={student.name} className="w-full h-full object-cover" />
                 ) : (
@@ -606,14 +623,14 @@ export const IDCard: React.FC<IDCardProps> = ({
               </div>
 
               {/* Signature section below photo */}
-              <div className="flex flex-col items-center justify-center mt-3 z-10 w-full">
-                <div className="relative h-8 flex items-center justify-center w-[160px]">
+              <div className="flex flex-col items-center justify-center mt-3 z-10 w-[166px]">
+                <div className="relative h-9 flex items-center justify-center w-full">
                   {student.signatureType === 'typed' ? (
-                    <span className="font-formal-sig text-[24px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none whitespace-nowrap">
+                    <span className="font-formal-sig text-[24px] text-[#0c2340] leading-none select-none pointer-events-none whitespace-nowrap">
                       {student.signatureText || "Admin Department"}
                     </span>
                   ) : student.signatureImage ? (
-                    <img src={student.signatureImage} alt="Signature" className="h-7 max-w-[140px] mt-0.5 object-contain select-none pointer-events-none" />
+                    <img src={student.signatureImage} alt="Signature" className="h-8 max-w-[150px] object-contain select-none pointer-events-none" />
                   ) : (
                     <span className="font-signature text-[20px] text-slate-400 italic font-medium">
                       {student.name || "John Perera"}
@@ -621,8 +638,8 @@ export const IDCard: React.FC<IDCardProps> = ({
                   )}
                 </div>
                 {/* Horizontal signature line */}
-                <div className="w-[155px] h-[1px] bg-slate-400" />
-                <span className="text-[5.5px] font-black text-slate-400 tracking-[0.12em] uppercase mt-[5px] block leading-none whitespace-nowrap">
+                <div className="w-full h-[1px] bg-slate-400" />
+                <span className="text-[5.5px] font-black text-slate-400 tracking-[0.12em] uppercase mt-[5px] block leading-none whitespace-nowrap text-center">
                   ADMIN DEPARTMENT SIGNATURE
                 </span>
               </div>
@@ -759,22 +776,22 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Section: QR CODE VERIFICATION PORT CAP */}
-          <div className="grid grid-cols-12 gap-3 items-center py-1.5 border-y border-slate-100" {...editorProps('back-verify')}>
+          <div className="grid grid-cols-12 gap-3 items-center p-3 border border-[#e2a812]/45 bg-[#fff9e8] shadow-[0_10px_24px_rgba(12,35,64,0.08)]" {...editorProps('back-verify')}>
             {/* QR block Left Column */}
             <div className="col-span-5 flex justify-center">
-              <div className="bg-white border-2 border-[#0c2340] p-1 rounded-xl shadow-md w-[100px] h-[100px] flex items-center justify-center">
+              <div className="bg-white border-[3px] border-[#0c2340] p-1 shadow-lg w-[104px] h-[104px] flex items-center justify-center">
                 {backQrUrl ? (
                   <img src={backQrUrl} alt="Back Verification Qr code" className="w-[88px] h-[88px] object-contain" />
                 ) : (
-                  <div className="w-full h-full bg-slate-100 rounded" />
+                  <div className="w-full h-full bg-slate-100" />
                 )}
               </div>
             </div>
 
             {/* Verification details capsule on right */}
             <div className="col-span-7 flex flex-col gap-1.5">
-              <div className="bg-[#0c2340] text-white rounded-xl py-2.5 px-3 flex items-center justify-between gap-2.5 shadow border border-slate-850">
-                <div className="w-7 h-7 bg-white/10 rounded-full flex items-center justify-center text-[#e2a812] flex-shrink-0">
+              <div className="bg-[#0c2340] text-white py-3 px-3.5 flex items-center justify-between gap-2.5 shadow-lg border border-slate-850 min-h-[62px]">
+                <div className="w-8 h-8 bg-white/10 flex items-center justify-center text-[#e2a812] flex-shrink-0">
                   <svg width="16" height="16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="2" y1="12" x2="22" y2="12" />
@@ -1028,18 +1045,24 @@ export const IDCard: React.FC<IDCardProps> = ({
         </div>
 
         {/* Fine, Handwritten Signature Zone */}
-        <div className="mt-4 flex items-end justify-between px-1 border-t border-slate-100 pt-2.5" {...editorProps('front-signature')}>
-          <div className="text-left leading-none flex flex-col justify-end">
-            <span className="text-[6.5px] font-black text-slate-400 tracking-widest uppercase block mb-1">
-                ADMIN DEPARTMENT SIGNATURE
-            </span>
-            <div className="w-[124px] h-[1px] border-b border-dashed border-slate-300" />
-          </div>
-
-          {/* Dynamic Signature Vector Cursive */}
-          <div className="relative h-10 flex items-center justify-center pr-3 min-w-[130px] bottom-[3px]">
-            <span className="font-formal-sig text-[30px] text-[#0c2340] leading-none mb-1 select-none pointer-events-none whitespace-nowrap">
-              {config.adminSignatureText || 'Admin Department'}
+        <div className="mt-4 flex justify-end px-1 border-t border-slate-100 pt-3" {...editorProps('front-signature')}>
+          <div className="w-[178px] flex flex-col items-center leading-none">
+            <div className="h-11 w-full flex items-end justify-center pb-1">
+              {config.adminSignatureImage ? (
+                <img
+                  src={config.adminSignatureImage}
+                  alt="Admin department signature"
+                  className="max-h-10 max-w-[168px] object-contain select-none pointer-events-none"
+                />
+              ) : (
+                <span className="font-formal-sig text-[30px] text-[#0c2340] leading-none select-none pointer-events-none whitespace-nowrap">
+                  {config.adminSignatureText || 'Admin Department'}
+                </span>
+              )}
+            </div>
+            <div className="w-full h-[1px] bg-slate-300" />
+            <span className="text-[6.5px] font-black text-slate-400 tracking-[0.14em] uppercase block mt-1.5 text-center">
+              ADMIN DEPARTMENT SIGNATURE
             </span>
           </div>
         </div>
