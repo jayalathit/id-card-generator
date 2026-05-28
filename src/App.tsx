@@ -15,6 +15,7 @@ import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, Re
 import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
 
 type TrainingMethod = 'FC' | 'TT' | 'GAP';
+const MIN_FUTURE_STUDENT_SERIAL = 10920;
 
 const MAIN_FIELD_OPTIONS = [
   { code: 'HMA', label: 'Heavy Machinery', enabled: true },
@@ -283,7 +284,7 @@ export default function App() {
     const highestSerial = students.reduce((max, student) => {
       const match = student.idNumber.match(/\/(\d{6})$/);
       return Math.max(max, match ? Number(match[1]) : 0);
-    }, students.length);
+    }, Math.max(students.length, MIN_FUTURE_STUDENT_SERIAL - 1));
     const paddedNum = String(highestSerial + 1).padStart(6, '0');
     
     setFormNic('');
