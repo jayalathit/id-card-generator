@@ -526,9 +526,9 @@ export const IDCard: React.FC<IDCardProps> = ({
                 <JayalathCampusHeadline
                   label={templateDetails.leftMainHeader || 'JAYALATH CAMPUS'}
                   variant="dark"
-                  className="text-[23px]"
+                  className="text-[28px]"
                   wordmarkClassName="h-[28px] w-auto"
-                  campusClassName="text-[23px]"
+                  campusClassName="text-[28px]"
                 />
                 <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
                   {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
@@ -915,9 +915,9 @@ export const IDCard: React.FC<IDCardProps> = ({
               label={templateDetails.leftMainHeader || "JAYALATH CAMPUS"}
               variant="light"
               align="right"
-              className="text-[22px]"
+              className="text-[27px]"
               wordmarkClassName="h-[27px] w-auto"
-              campusClassName="text-[22px]"
+              campusClassName="text-[27px]"
             />
             <span className="font-sans font-extrabold text-[7.5px] text-[#e2a812] uppercase tracking-wide block mt-[3px] leading-tight text-right">
               {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
