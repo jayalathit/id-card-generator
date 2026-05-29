@@ -62,7 +62,7 @@ const ASSOCIATE_COMPANIES = [
   { name: 'Jayalath Overseas Vocational Training Institute', logo: associateOverseasVocationalUrl }
 ];
 
-const DEFAULT_HEAD_OFFICE_ADDRESS = '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.';
+const DEFAULT_HEAD_OFFICE_ADDRESS = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
 const DEFAULT_PRIMARY_CONTACT = '+94 70 250 3503';
 const DEFAULT_SECONDARY_CONTACT = '+94 11 750 3503';
 const DEFAULT_WEBSITE = 'jceti.com';

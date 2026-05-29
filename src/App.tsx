@@ -105,7 +105,7 @@ const DEFAULT_TEMPLATE_DETAILS: TemplateDetails = {
   rightSubHeader: 'CREDENTIAL',
   validityYears: 2,
   backVerificationUrl: 'jceti.com/verification',
-  backAddress: '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.',
+  backAddress: 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)',
   backContactPhone: '+94 70 250 3503',
   backContactEmail: '+94 11 750 3503',
   backLogoLabel: 'JAYALATH CAMPUS'

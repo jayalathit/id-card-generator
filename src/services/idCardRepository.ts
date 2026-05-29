@@ -99,10 +99,13 @@ function configuredAdminSignaturePath(row: ConfigRow): string | undefined {
 }
 
 function normalizeTemplateDetails(details: TemplateDetails): TemplateDetails {
+  const headOfficeAddress = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
   return {
     ...details,
-    backAddress: details.backAddress.includes('for Construction & Industrial Training') || details.backAddress.includes('No. 123, Training Road')
-      ? '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.'
+    backAddress: details.backAddress.includes('for Construction & Industrial Training') ||
+      details.backAddress.includes('No. 123, Training Road') ||
+      details.backAddress.includes('Danister De Silva Road')
+      ? headOfficeAddress
       : details.backAddress,
     backContactPhone: details.backContactPhone === '+94 11 2 345 678' || details.backContactPhone === '070 2 503 503'
       ? '+94 70 250 3503'
@@ -114,6 +117,7 @@ function normalizeTemplateDetails(details: TemplateDetails): TemplateDetails {
 }
 
 function legacyDetails(row: ConfigRow): TemplateDetails {
+  const headOfficeAddress = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
   return normalizeTemplateDetails({
     leftMainHeader: row.left_main_header,
     leftSubHeader: row.left_sub_header === 'for Construction & Industrial Training'
@@ -125,8 +129,8 @@ function legacyDetails(row: ConfigRow): TemplateDetails {
     backVerificationUrl: row.back_verification_url === 'www.jayalathcampus.lk/verify'
       ? 'jceti.com/verification'
       : row.back_verification_url,
-    backAddress: row.back_address.includes('for Construction & Industrial Training')
-      ? '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.'
+    backAddress: row.back_address.includes('for Construction & Industrial Training') || row.back_address.includes('Danister De Silva Road')
+      ? headOfficeAddress
       : row.back_address,
     backContactPhone: row.back_contact_phone === '+94 11 2 345 678' || row.back_contact_phone === '070 2 503 503'
       ? '+94 70 250 3503'
