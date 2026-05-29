@@ -498,27 +498,33 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Footer Contacts Row */}
-          <div className="relative z-10 grid grid-cols-[1.35fr_0.9fr_1.1fr] gap-0 border-t border-gray-200 mt-auto mb-[18px]" {...editorProps('back-contact')}>
+          <div className="relative z-10 grid grid-cols-3 gap-0 border-t border-gray-200 mt-auto mb-[18px]" {...editorProps('back-contact')}>
             {/* Column 1 Address */}
-            <div className="flex items-start gap-2 pt-[10px] pr-3">
-              <MapPin size={12} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
-              <div className="text-left">
+            <div className="grid grid-cols-[14px_1fr] gap-2 pt-[10px] pr-3">
+              <div className="w-[14px] h-[14px] flex items-start justify-center pt-[1px]">
+                <MapPin size={12} className="text-[#e2a812] flex-shrink-0" />
+              </div>
+              <div className="text-left min-w-0">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">HEAD OFFICE</strong>
                 <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{headOfficeAddress}</p>
               </div>
             </div>
             {/* Column 2 Contact */}
-            <div className="flex items-start gap-2 border-x border-gray-200 pt-[10px] px-3">
-              <Phone size={11} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
-              <div className="text-left">
+            <div className="grid grid-cols-[14px_1fr] gap-2 border-x border-gray-200 pt-[10px] px-3">
+              <div className="w-[14px] h-[14px] flex items-start justify-center pt-[1px]">
+                <Phone size={12} className="text-[#e2a812] flex-shrink-0" />
+              </div>
+              <div className="text-left min-w-0">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
                 <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{primaryContact}<br/>{secondaryContact}</p>
               </div>
             </div>
             {/* Column 3 Website and email */}
-            <div className="flex items-start gap-2 pt-[10px] pl-3">
-              <Mail size={12} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
-              <div className="text-left">
+            <div className="grid grid-cols-[14px_1fr] gap-2 pt-[10px] pl-3">
+              <div className="w-[14px] h-[14px] flex items-start justify-center pt-[1px]">
+                <Mail size={12} className="text-[#e2a812] flex-shrink-0" />
+              </div>
+              <div className="text-left min-w-0">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">WEB / EMAIL</strong>
                 <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{website}<br/>{DEFAULT_EMAIL}</p>
               </div>
