@@ -395,8 +395,10 @@ export const IDCard: React.FC<IDCardProps> = ({
                   className="h-[15px] w-[82px] object-contain object-left"
                   draggable={false}
                 />
-                <span className="block w-[82px] text-[7.2px] font-extrabold text-slate-500 uppercase mt-[2.5px] leading-none text-justify [text-align-last:justify]">
-                  CAMPUS
+                <span className="flex w-[82px] items-center justify-between text-[7.2px] font-extrabold text-slate-500 uppercase mt-[2.5px] leading-none">
+                  {'CAMPUS'.split('').map((letter) => (
+                    <span key={letter}>{letter}</span>
+                  ))}
                 </span>
               </div>
             </div>
