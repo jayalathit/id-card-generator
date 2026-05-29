@@ -388,14 +388,14 @@ export const IDCard: React.FC<IDCardProps> = ({
               <div className="w-9 h-9 flex items-center justify-center">
                 <BrandLogo size={34} />
               </div>
-              <div className="flex flex-col leading-none text-left min-w-[72px]">
+              <div className="flex flex-col leading-none text-left w-[82px]">
                 <img
                   src={jayalathWordmarkUrl}
                   alt="JAYALATH"
-                  className="h-[15px] w-auto max-w-[82px] object-contain object-left"
+                  className="h-[15px] w-[82px] object-contain object-left"
                   draggable={false}
                 />
-                <span className="text-[7.5px] font-extrabold text-slate-500 tracking-widest uppercase mt-[2.5px] leading-none">
+                <span className="block w-[82px] text-[7.2px] font-extrabold text-slate-500 uppercase mt-[2.5px] leading-none text-justify [text-align-last:justify]">
                   CAMPUS
                 </span>
               </div>
