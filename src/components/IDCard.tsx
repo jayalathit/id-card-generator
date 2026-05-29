@@ -7,6 +7,9 @@ import React, { CSSProperties, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { CanvasElement, CardConfig, Student, TemplateSurface } from '../types';
 import jayalathWordmarkUrl from '../assets/jayalath-wordmark.png';
+import associateChiuTengUrl from '../assets/associate-chiu-teng.png';
+import associateGlobalWorkforceUrl from '../assets/associate-global-workforce.png';
+import associateOverseasVocationalUrl from '../assets/associate-overseas-vocational.png';
 import { baseCanvasElement, getCanvasElement, surfaceFor, TEMPLATE_LAYERS } from '../designLayers';
 import { 
   User, 
@@ -51,6 +54,12 @@ const OPERATOR_GRADE_GUIDE = [
   { grade: 'A', marks: '85-100 marks', label: 'Advanced competency' },
   { grade: 'B', marks: '70-84 marks', label: 'Professional competency' },
   { grade: 'C', marks: '55-69 marks', label: 'Operational competency' }
+];
+
+const ASSOCIATE_COMPANIES = [
+  { name: 'Jayalath Chiu Teng Lanka', logo: associateChiuTengUrl },
+  { name: 'Jayalath Global Workforce', logo: associateGlobalWorkforceUrl },
+  { name: 'Jayalath Overseas Vocational Training Institute', logo: associateOverseasVocationalUrl }
 ];
 
 function JayalathCampusHeadline({
@@ -363,48 +372,48 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Central content splitting columns */}
-          <div className="relative z-10 grid grid-cols-12 gap-5 items-start mt-[14px] px-1">
+          <div className="relative z-10 grid grid-cols-12 gap-4 items-start mt-[10px] px-1">
             {/* Left side details */}
-            <div className="col-span-7 flex flex-col gap-2.5" {...editorProps('back-statement')}>
-              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#0c2340] bg-slate-50/80 px-3 py-2.5 min-h-[64px]">
-                <div className="w-[30px] h-[30px] bg-[#0c2340] flex items-center justify-center text-white flex-shrink-0 shadow-sm">
+            <div className="col-span-7 flex flex-col gap-2" {...editorProps('back-statement')}>
+              <div className="grid grid-cols-[28px_1fr] gap-3 border-l-[3px] border-[#0c2340] bg-slate-50/80 px-3 py-2 min-h-[58px]">
+                <div className="w-[28px] h-[28px] bg-[#0c2340] flex items-center justify-center text-white flex-shrink-0 shadow-sm">
                   <ShieldCheck size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
                   <span className="text-[8px] font-black text-[#0c2340] tracking-[0.18em] uppercase leading-none block">
                     Authorized Operator Credential
                   </span>
-                  <p className="text-[9.2px] font-semibold text-slate-600 leading-[1.35] mt-1.5 max-w-[270px]">
+                  <p className="text-[8.8px] font-semibold text-slate-600 leading-[1.32] mt-1.5 max-w-[270px]">
                     This card is an official identification for authorized heavy equipment operators only. It is non-transferable and must be carried while on duty.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-2.5 min-h-[58px] shadow-sm">
-                <div className="w-[30px] h-[30px] bg-[#e2a812] flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
+              <div className="grid grid-cols-[28px_1fr] gap-3 border-l-[3px] border-[#e2a812] bg-white px-3 py-2 min-h-[52px] shadow-sm">
+                <div className="w-[28px] h-[28px] bg-[#e2a812] flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
                   <Calendar size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
                   <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
                     VALIDITY
                   </span>
-                  <p className="text-[9.2px] font-semibold text-slate-600 leading-[1.35] mt-1.5 max-w-[270px]">
+                  <p className="text-[8.8px] font-semibold text-slate-600 leading-[1.32] mt-1.5 max-w-[270px]">
                     This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{templateDetails.validityYears} YEAR{templateDetails.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-[30px_1fr] gap-3 border-l-[3px] border-slate-300 bg-white px-3 py-2.5 shadow-sm">
-                <div className="w-[30px] h-[30px] bg-slate-100 flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
+              <div className="grid grid-cols-[28px_1fr] gap-3 border-l-[3px] border-slate-300 bg-white px-3 py-2 shadow-sm">
+                <div className="w-[28px] h-[28px] bg-slate-100 flex items-center justify-center text-[#0c2340] flex-shrink-0 shadow-sm">
                   <Award size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
                   <span className="text-[8px] font-black text-[#0c2340] uppercase tracking-[0.18em] leading-none block">
                     Grade Classification Guide
                   </span>
-                  <div className="grid grid-cols-3 gap-1.5 mt-2">
+                  <div className="grid grid-cols-3 gap-1.5 mt-1.5">
                     {OPERATOR_GRADE_GUIDE.map((item) => (
-                      <div key={item.grade} className="border border-slate-200 bg-slate-50 px-1.5 py-1.5 min-h-[39px]">
+                      <div key={item.grade} className="border border-slate-200 bg-slate-50 px-1.5 py-1.5 min-h-[37px]">
                         <span className="text-[10px] font-black text-[#0c2340] leading-none block">Grade {item.grade}</span>
                         <span className="text-[7.2px] font-black text-[#e2a812] uppercase leading-none block mt-1">{item.marks}</span>
                         <span className="text-[6.5px] font-bold text-slate-500 uppercase leading-none block mt-1">{item.label}</span>
@@ -417,28 +426,42 @@ export const IDCard: React.FC<IDCardProps> = ({
 
             {/* Right side verification */}
             <div className="col-span-5 flex justify-end" {...editorProps('back-verify')}>
-              <div className="w-[205px] border border-slate-200 bg-white shadow-sm">
-                <div className="h-[28px] bg-[#0c2340] flex items-center justify-center text-white text-[8px] font-black tracking-[0.2em] uppercase border-b-[3px] border-[#e2a812]">
-                  Verify Operator
-                </div>
-                <div className="p-3 flex flex-col items-center">
-                  <div className="bg-white border border-slate-300 p-1.5 w-[112px] h-[112px] flex items-center justify-center">
-                    {backQrUrl ? (
-                      <img src={backQrUrl} alt="Back Verification Qr code" className="w-[102px] h-[102px] object-contain" />
-                    ) : (
-                      <div className="w-full h-full bg-slate-100" />
-                    )}
+              <div className="w-[196px] flex flex-col gap-2">
+                <div className="border border-slate-200 bg-white shadow-sm">
+                  <div className="h-[24px] bg-[#0c2340] flex items-center justify-center text-white text-[7.5px] font-black tracking-[0.2em] uppercase border-b-[3px] border-[#e2a812]">
+                    Verify Operator
                   </div>
-                  <div className="mt-3 w-full border-t border-slate-100 pt-2 flex items-start gap-2">
-                    <Globe size={13} className="text-[#e2a812] flex-shrink-0 mt-[1px]" />
-                    <div className="flex flex-col leading-none text-left min-w-0">
-                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none block">
-                        Website verification
-                      </span>
-                      <span className="text-[8px] font-extrabold text-[#0c2340] tracking-wide block break-all leading-snug select-all mt-1">
-                        {templateDetails.backVerificationUrl}
-                      </span>
+                  <div className="p-2.5 flex flex-col items-center">
+                    <div className="bg-white border border-slate-300 p-1 w-[92px] h-[92px] flex items-center justify-center">
+                      {backQrUrl ? (
+                        <img src={backQrUrl} alt="Back Verification Qr code" className="w-[84px] h-[84px] object-contain" />
+                      ) : (
+                        <div className="w-full h-full bg-slate-100" />
+                      )}
                     </div>
+                    <div className="mt-2 w-full border-t border-slate-100 pt-2 flex items-start gap-2">
+                      <Globe size={12} className="text-[#e2a812] flex-shrink-0 mt-[1px]" />
+                      <div className="flex flex-col leading-none text-left min-w-0">
+                        <span className="text-[6.5px] font-black text-slate-400 uppercase tracking-wider leading-none block">
+                          Website verification
+                        </span>
+                        <span className="text-[7.4px] font-extrabold text-[#0c2340] tracking-wide block break-all leading-snug select-all mt-1">
+                          {templateDetails.backVerificationUrl}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="border border-slate-200 bg-white px-2 py-1.5 shadow-sm">
+                  <span className="block text-center text-[6.2px] font-black text-slate-400 uppercase tracking-[0.18em] leading-none">
+                    Associate Companies
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5 items-center mt-1.5">
+                    {ASSOCIATE_COMPANIES.map((company) => (
+                      <div key={company.name} className="h-[38px] bg-slate-50 border border-slate-100 flex items-center justify-center p-1">
+                        <img src={company.logo} alt={company.name} className="max-h-[30px] max-w-full object-contain" draggable={false} />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
