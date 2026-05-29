@@ -98,6 +98,9 @@ const INITIAL_STUDENTS: Student[] = [
   }
 ];
 
+const STUDENT_HEAD_OFFICE_ADDRESS = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
+const OPERATOR_HEAD_OFFICE_ADDRESS = '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.';
+
 const DEFAULT_TEMPLATE_DETAILS: TemplateDetails = {
   leftMainHeader: 'JAYALATH CAMPUS',
   leftSubHeader: 'Career Education & Training Institute',
@@ -105,10 +108,15 @@ const DEFAULT_TEMPLATE_DETAILS: TemplateDetails = {
   rightSubHeader: 'CREDENTIAL',
   validityYears: 2,
   backVerificationUrl: 'jceti.com/verification',
-  backAddress: 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)',
+  backAddress: STUDENT_HEAD_OFFICE_ADDRESS,
   backContactPhone: '+94 70 250 3503',
   backContactEmail: '+94 11 750 3503',
   backLogoLabel: 'JAYALATH CAMPUS'
+};
+
+const OPERATOR_TEMPLATE_DETAILS: TemplateDetails = {
+  ...DEFAULT_TEMPLATE_DETAILS,
+  backAddress: OPERATOR_HEAD_OFFICE_ADDRESS
 };
 
 const INITIAL_CONFIG: CardConfig = {
@@ -118,7 +126,7 @@ const INITIAL_CONFIG: CardConfig = {
   accentColor: '#e2a812',
   canvasElements: [],
   studentDetails: { ...DEFAULT_TEMPLATE_DETAILS },
-  operatorDetails: { ...DEFAULT_TEMPLATE_DETAILS }
+  operatorDetails: { ...OPERATOR_TEMPLATE_DETAILS }
 };
 
 function errorMessage(error: unknown): string {

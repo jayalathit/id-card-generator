@@ -62,7 +62,8 @@ const ASSOCIATE_COMPANIES = [
   { name: 'Jayalath Overseas Vocational Training Institute', logo: associateOverseasVocationalUrl }
 ];
 
-const DEFAULT_HEAD_OFFICE_ADDRESS = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
+const STUDENT_HEAD_OFFICE_ADDRESS = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
+const OPERATOR_HEAD_OFFICE_ADDRESS = '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.';
 const DEFAULT_PRIMARY_CONTACT = '+94 70 250 3503';
 const DEFAULT_SECONDARY_CONTACT = '+94 11 750 3503';
 const DEFAULT_WEBSITE = 'jceti.com';
@@ -150,7 +151,8 @@ export const IDCard: React.FC<IDCardProps> = ({
     : 'JCB Backhoe Loader / Class A');
   const primaryContact = formatSriLankanPhone(templateDetails.backContactPhone, DEFAULT_PRIMARY_CONTACT);
   const secondaryContact = formatSriLankanPhone(templateDetails.backContactEmail, DEFAULT_SECONDARY_CONTACT);
-  const headOfficeAddress = (templateDetails.backAddress || DEFAULT_HEAD_OFFICE_ADDRESS).replace(/\\n/g, '\n');
+  const defaultHeadOfficeAddress = card_designation === 'operator' ? OPERATOR_HEAD_OFFICE_ADDRESS : STUDENT_HEAD_OFFICE_ADDRESS;
+  const headOfficeAddress = (templateDetails.backAddress || defaultHeadOfficeAddress).replace(/\\n/g, '\n');
   const website = websiteFromVerificationUrl(templateDetails.backVerificationUrl);
   const [mainFieldCode = 'HMA', , trainingMethodCode = 'FC'] = String(student.idNumber || '').toUpperCase().split('/');
   const courseCategory = ({

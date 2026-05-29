@@ -6,6 +6,8 @@ const ADMIN_SIGNATURE_SETTING_ID = '__template_admin_signature__';
 const ADMIN_SIGNATURE_PATH_SETTING_ID = '__template_admin_signature_path__';
 const STUDENT_DETAILS_SETTING_ID = '__template_student_details__';
 const OPERATOR_DETAILS_SETTING_ID = '__template_operator_details__';
+const STUDENT_HEAD_OFFICE_ADDRESS = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
+const OPERATOR_HEAD_OFFICE_ADDRESS = '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.';
 
 interface StudentRow {
   id: string;
@@ -98,15 +100,15 @@ function configuredAdminSignaturePath(row: ConfigRow): string | undefined {
   return row.canvas_elements?.find((element) => element.id === ADMIN_SIGNATURE_PATH_SETTING_ID)?.text?.trim() || undefined;
 }
 
-function normalizeTemplateDetails(details: TemplateDetails): TemplateDetails {
-  const headOfficeAddress = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
+function normalizeTemplateDetails(details: TemplateDetails, designation: 'student' | 'operator'): TemplateDetails {
+  const headOfficeAddress = designation === 'operator' ? OPERATOR_HEAD_OFFICE_ADDRESS : STUDENT_HEAD_OFFICE_ADDRESS;
+  const hasLegacyAddress = details.backAddress.includes('for Construction & Industrial Training') ||
+    details.backAddress.includes('No. 123, Training Road') ||
+    details.backAddress.includes('Danister De Silva Road') ||
+    details.backAddress.includes('Nugadolawatta');
   return {
     ...details,
-    backAddress: details.backAddress.includes('for Construction & Industrial Training') ||
-      details.backAddress.includes('No. 123, Training Road') ||
-      details.backAddress.includes('Danister De Silva Road')
-      ? headOfficeAddress
-      : details.backAddress,
+    backAddress: hasLegacyAddress ? headOfficeAddress : details.backAddress,
     backContactPhone: details.backContactPhone === '+94 11 2 345 678' || details.backContactPhone === '070 2 503 503'
       ? '+94 70 250 3503'
       : details.backContactPhone,
@@ -116,8 +118,8 @@ function normalizeTemplateDetails(details: TemplateDetails): TemplateDetails {
   };
 }
 
-function legacyDetails(row: ConfigRow): TemplateDetails {
-  const headOfficeAddress = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
+function legacyDetails(row: ConfigRow, designation: 'student' | 'operator'): TemplateDetails {
+  const headOfficeAddress = designation === 'operator' ? OPERATOR_HEAD_OFFICE_ADDRESS : STUDENT_HEAD_OFFICE_ADDRESS;
   return normalizeTemplateDetails({
     leftMainHeader: row.left_main_header,
     leftSubHeader: row.left_sub_header === 'for Construction & Industrial Training'
@@ -139,16 +141,16 @@ function legacyDetails(row: ConfigRow): TemplateDetails {
       ? '+94 11 750 3503'
       : row.back_contact_email,
     backLogoLabel: row.back_logo_label
-  });
+  }, designation);
 }
 
-function storedDetails(row: ConfigRow, id: string, fallback: TemplateDetails): TemplateDetails {
+function storedDetails(row: ConfigRow, id: string, fallback: TemplateDetails, designation: 'student' | 'operator'): TemplateDetails {
   const serialized = row.canvas_elements?.find((element) => element.id === id)?.text;
-  if (!serialized) return normalizeTemplateDetails(fallback);
+  if (!serialized) return normalizeTemplateDetails(fallback, designation);
   try {
-    return normalizeTemplateDetails({ ...fallback, ...(JSON.parse(serialized) as Partial<TemplateDetails>) });
+    return normalizeTemplateDetails({ ...fallback, ...(JSON.parse(serialized) as Partial<TemplateDetails>) }, designation);
   } catch {
-    return normalizeTemplateDetails(fallback);
+    return normalizeTemplateDetails(fallback, designation);
   }
 }
 
@@ -202,9 +204,10 @@ async function hydrateStudent(row: StudentRow): Promise<Student> {
 }
 
 async function hydrateConfig(row: ConfigRow): Promise<CardConfig> {
-  const legacy = legacyDetails(row);
-  const studentDetails = storedDetails(row, STUDENT_DETAILS_SETTING_ID, legacy);
-  const operatorDetails = storedDetails(row, OPERATOR_DETAILS_SETTING_ID, legacy);
+  const studentLegacy = legacyDetails(row, 'student');
+  const operatorLegacy = legacyDetails(row, 'operator');
+  const studentDetails = storedDetails(row, STUDENT_DETAILS_SETTING_ID, studentLegacy, 'student');
+  const operatorDetails = storedDetails(row, OPERATOR_DETAILS_SETTING_ID, operatorLegacy, 'operator');
   const adminSignaturePath = configuredAdminSignaturePath(row);
   return {
     institutionLogo: await signedAssetUrl(row.institution_logo_path),
