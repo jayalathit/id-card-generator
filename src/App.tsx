@@ -105,9 +105,9 @@ const DEFAULT_TEMPLATE_DETAILS: TemplateDetails = {
   rightSubHeader: 'CREDENTIAL',
   validityYears: 2,
   backVerificationUrl: 'jceti.com/verification',
-  backAddress: 'Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka.',
-  backContactPhone: '070 2 503 503',
-  backContactEmail: '011 7 503 503',
+  backAddress: '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.',
+  backContactPhone: '+94 70 250 3503',
+  backContactEmail: '+94 11 750 3503',
   backLogoLabel: 'JAYALATH CAMPUS'
 };
 
@@ -1675,7 +1675,7 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="font-bold text-[10.5px] text-natural-darktext block">OFFICIAL POSTAL ADDRESS</span>
+                  <span className="font-bold text-[10.5px] text-natural-darktext block">HEAD OFFICE ADDRESS</span>
                   <textarea
                     rows={3}
                     className="bg-white border border-natural-darkborder rounded px-3 py-1.5 text-natural-darktext outline-none focus:border-natural-sage font-sans text-xs"

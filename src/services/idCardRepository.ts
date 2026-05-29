@@ -98,8 +98,23 @@ function configuredAdminSignaturePath(row: ConfigRow): string | undefined {
   return row.canvas_elements?.find((element) => element.id === ADMIN_SIGNATURE_PATH_SETTING_ID)?.text?.trim() || undefined;
 }
 
-function legacyDetails(row: ConfigRow): TemplateDetails {
+function normalizeTemplateDetails(details: TemplateDetails): TemplateDetails {
   return {
+    ...details,
+    backAddress: details.backAddress.includes('for Construction & Industrial Training') || details.backAddress.includes('No. 123, Training Road')
+      ? '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.'
+      : details.backAddress,
+    backContactPhone: details.backContactPhone === '+94 11 2 345 678' || details.backContactPhone === '070 2 503 503'
+      ? '+94 70 250 3503'
+      : details.backContactPhone,
+    backContactEmail: details.backContactEmail === '+94 77 123 4567' || details.backContactEmail === '011 7 503 503'
+      ? '+94 11 750 3503'
+      : details.backContactEmail
+  };
+}
+
+function legacyDetails(row: ConfigRow): TemplateDetails {
+  return normalizeTemplateDetails({
     leftMainHeader: row.left_main_header,
     leftSubHeader: row.left_sub_header === 'for Construction & Industrial Training'
       ? 'Career Education & Training Institute'
@@ -111,21 +126,25 @@ function legacyDetails(row: ConfigRow): TemplateDetails {
       ? 'jceti.com/verification'
       : row.back_verification_url,
     backAddress: row.back_address.includes('for Construction & Industrial Training')
-      ? row.back_address.replace('Jayalath Campus for Construction & Industrial Training', 'Jayalath Campus').replace('Industrial Training Road', 'Training Road')
+      ? '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.'
       : row.back_address,
-    backContactPhone: row.back_contact_phone === '+94 11 2 345 678' ? '070 2 503 503' : row.back_contact_phone,
-    backContactEmail: row.back_contact_email === '+94 77 123 4567' ? '011 7 503 503' : row.back_contact_email,
+    backContactPhone: row.back_contact_phone === '+94 11 2 345 678' || row.back_contact_phone === '070 2 503 503'
+      ? '+94 70 250 3503'
+      : row.back_contact_phone,
+    backContactEmail: row.back_contact_email === '+94 77 123 4567' || row.back_contact_email === '011 7 503 503'
+      ? '+94 11 750 3503'
+      : row.back_contact_email,
     backLogoLabel: row.back_logo_label
-  };
+  });
 }
 
 function storedDetails(row: ConfigRow, id: string, fallback: TemplateDetails): TemplateDetails {
   const serialized = row.canvas_elements?.find((element) => element.id === id)?.text;
-  if (!serialized) return fallback;
+  if (!serialized) return normalizeTemplateDetails(fallback);
   try {
-    return { ...fallback, ...(JSON.parse(serialized) as Partial<TemplateDetails>) };
+    return normalizeTemplateDetails({ ...fallback, ...(JSON.parse(serialized) as Partial<TemplateDetails>) });
   } catch {
-    return fallback;
+    return normalizeTemplateDetails(fallback);
   }
 }
 

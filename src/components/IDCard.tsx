@@ -62,6 +62,31 @@ const ASSOCIATE_COMPANIES = [
   { name: 'Jayalath Overseas Vocational Training Institute', logo: associateOverseasVocationalUrl }
 ];
 
+const DEFAULT_HEAD_OFFICE_ADDRESS = '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.';
+const DEFAULT_PRIMARY_CONTACT = '+94 70 250 3503';
+const DEFAULT_SECONDARY_CONTACT = '+94 11 750 3503';
+const DEFAULT_WEBSITE = 'jceti.com';
+const DEFAULT_EMAIL = 'info@jceti.com';
+
+function formatSriLankanPhone(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return fallback;
+  if (trimmed.startsWith('+')) return trimmed;
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.startsWith('94')) return `+${digits.replace(/^94(\d{2})(\d{3})(\d{4})$/, '94 $1 $2 $3')}`;
+  if (digits.startsWith('0') && digits.length === 10) {
+    const withoutLeadingZero = digits.slice(1);
+    return `+94 ${withoutLeadingZero.slice(0, 2)} ${withoutLeadingZero.slice(2, 5)} ${withoutLeadingZero.slice(5)}`;
+  }
+  return trimmed;
+}
+
+function websiteFromVerificationUrl(value: string | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return DEFAULT_WEBSITE;
+  return trimmed.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/verification\/?$/i, '') || DEFAULT_WEBSITE;
+}
+
 function JayalathCampusHeadline({
   label,
   variant,
@@ -123,6 +148,10 @@ export const IDCard: React.FC<IDCardProps> = ({
   const equipment_class = student.equipmentClass || (equipment_type === 'forklift'
     ? 'Counterbalance Forklift / Class A'
     : 'JCB Backhoe Loader / Class A');
+  const primaryContact = formatSriLankanPhone(templateDetails.backContactPhone, DEFAULT_PRIMARY_CONTACT);
+  const secondaryContact = formatSriLankanPhone(templateDetails.backContactEmail, DEFAULT_SECONDARY_CONTACT);
+  const headOfficeAddress = (templateDetails.backAddress || DEFAULT_HEAD_OFFICE_ADDRESS).replace(/\\n/g, '\n');
+  const website = websiteFromVerificationUrl(templateDetails.backVerificationUrl);
   const [mainFieldCode = 'HMA', , trainingMethodCode = 'FC'] = String(student.idNumber || '').toUpperCase().split('/');
   const courseCategory = ({
     HMA: 'Heavy Machinery',
@@ -469,13 +498,13 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Footer Contacts Row */}
-          <div className="relative z-10 grid grid-cols-[1.45fr_1fr_1fr] gap-0 border-t border-gray-200 mt-auto mb-[18px]" {...editorProps('back-contact')}>
+          <div className="relative z-10 grid grid-cols-[1.35fr_0.9fr_1.1fr] gap-0 border-t border-gray-200 mt-auto mb-[18px]" {...editorProps('back-contact')}>
             {/* Column 1 Address */}
             <div className="flex items-start gap-2 pt-[10px] pr-3">
               <MapPin size={12} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
-                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">ADDRESS</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{templateDetails.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."}</p>
+                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">HEAD OFFICE</strong>
+                <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{headOfficeAddress}</p>
               </div>
             </div>
             {/* Column 2 Contact */}
@@ -483,15 +512,15 @@ export const IDCard: React.FC<IDCardProps> = ({
               <Phone size={11} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
                 <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{templateDetails.backContactPhone || "070 2 503 503"}<br/>{templateDetails.backContactEmail || "011 7 503 503"}</p>
+                <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{primaryContact}<br/>{secondaryContact}</p>
               </div>
             </div>
-            {/* Column 3 Envelope */}
+            {/* Column 3 Website and email */}
             <div className="flex items-start gap-2 pt-[10px] pl-3">
               <Mail size={12} className="text-[#e2a812] mt-[1.5px] flex-shrink-0" />
               <div className="text-left">
-                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">IN CASE FOUND</strong>
-                <p className="text-[8.5px] font-semibold text-slate-500 mt-[5px] leading-normal">Please return to the address or contact number provided.</p>
+                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">WEB / EMAIL</strong>
+                <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{website}<br/>{DEFAULT_EMAIL}</p>
               </div>
             </div>
           </div>
@@ -804,7 +833,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[9px] text-[#0c2340] font-black pl-4 uppercase">
-              Contact: {templateDetails.backContactPhone || "070 2 503 503"} <span className="text-gray-400 font-normal px-1">|</span> {templateDetails.backContactEmail || "011 7 503 503"}
+              Contact: {primaryContact} <span className="text-gray-400 font-normal px-1">|</span> {secondaryContact}
             </p>
           </div>
 
@@ -876,7 +905,7 @@ export const IDCard: React.FC<IDCardProps> = ({
               <div className="flex-1 h-[1.5px] bg-[#0c2340]/10 rounded-full" />
             </div>
             <p className="text-[8.5px] text-slate-500 font-semibold pl-4 leading-normal whitespace-pre-line tracking-tight uppercase">
-              {templateDetails.backAddress || "Jayalath Campus\nNo. 123, Training Road,\nKandana, Western Province, Sri Lanka."}
+              {headOfficeAddress}
             </p>
           </div>
 

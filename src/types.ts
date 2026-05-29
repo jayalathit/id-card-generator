@@ -73,7 +73,7 @@ export interface CardConfig {
   
   validityYears: number; // 2 by default
   backVerificationUrl: string; // "jceti.com/verification"
-  backAddress: string; // "Jayalath Campus\nNo. 123, Training Road,\nKandana, Sri Lanka."
+  backAddress: string; // Head office address
   backContactPhone: string; // Primary telephone
   backContactEmail: string; // Secondary telephone retained in legacy database column
   backLogoLabel: string; // "JAYALATH CAMPUS"
