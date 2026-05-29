@@ -4,11 +4,16 @@
  */
 
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { getFontEmbedCSS, toPng } from 'html-to-image';
 
 type CaptureCopy = {
   host: HTMLDivElement;
   element: HTMLElement;
+};
+
+type CaptureSize = {
+  width: number;
+  height: number;
 };
 
 function mountCaptureCopy(source: HTMLElement, width: number, height: number, top: number): CaptureCopy {
@@ -44,6 +49,25 @@ function mountCaptureCopy(source: HTMLElement, width: number, height: number, to
   host.appendChild(element);
   document.body.appendChild(host);
   return { host, element };
+}
+
+async function captureElementImage(element: HTMLElement, size: CaptureSize, fontEmbedCSS?: string): Promise<string> {
+  element.getBoundingClientRect();
+  return toPng(element, {
+    cacheBust: true,
+    pixelRatio: 3,
+    backgroundColor: '#ffffff',
+    width: size.width,
+    height: size.height,
+    style: {
+      width: `${size.width}px`,
+      height: `${size.height}px`,
+      margin: '0',
+      transform: 'none',
+      transformOrigin: 'top left'
+    },
+    fontEmbedCSS
+  });
 }
 
 /**
@@ -86,7 +110,7 @@ function oklchToRgb(l: number, c: number, h: number, a: number = 1): string {
 }
 
 /**
- * Searches and replaces all OKLCH color definitions with custom parsed RGBA colors that are fully compatible with html2canvas.
+ * Searches and replaces all OKLCH color definitions with custom parsed RGBA colors for PDF image rendering.
  */
 export function parseAndConvertOklch(val: string): string {
   if (typeof val !== 'string' || !val.includes('oklch')) {
@@ -115,7 +139,7 @@ export function parseAndConvertOklch(val: string): string {
 }
 
 /**
- * Searches and replaces all OKLAB color definitions with custom parsed RGBA colors that are fully compatible with html2canvas.
+ * Searches and replaces all OKLAB color definitions with custom parsed RGBA colors for PDF image rendering.
  */
 export function parseAndConvertOklab(val: string): string {
   if (typeof val !== 'string' || !val.includes('oklab')) {
@@ -167,9 +191,8 @@ export async function downloadIDCardPDF(
 
   try {
     // Intercept window.getComputedStyle to automatically sanitize any 'oklch' values.
-    // getComputedStyle contains modern color definitions in Oklch form for Tailwind CSS v4 variables
-    // which crashes html2canvas's internal colorparser. By proxying the style values and converting
-    // oklch values to fully equivalent RGBA elements, we ensure html2canvas executes reliably and retains accurate brand coloring.
+    // getComputedStyle contains modern color definitions in OKLCH form for Tailwind CSS v4 variables.
+    // The PDF renderer serializes computed styles, so converting these values to RGBA keeps brand colors stable.
     const sanitizeValue = (val: any) => {
       if (typeof val === 'string') {
         let clean = val;
@@ -230,27 +253,16 @@ export async function downloadIDCardPDF(
         });
       }));
 
-      // Temporarily apply clean, high-resolution layout and capture canvases
-      // Using high zoom scaling (3x) for flawless print output quality
-      const canvasOptions = {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        allowTaint: true,
-        width: captureWidth,
-        height: captureHeight,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: captureWidth,
-        windowHeight: captureHeight
-      };
+      const captureSize = { width: captureWidth, height: captureHeight };
+      const fontEmbedCSS = await Promise.race([
+        getFontEmbedCSS(frontCapture.element),
+        new Promise<string | undefined>((resolve) => window.setTimeout(() => resolve(undefined), assetWaitMs))
+      ]);
 
-      const canvasFront = await html2canvas(frontCapture.element, canvasOptions);
-      const canvasBack = await html2canvas(backCapture.element, canvasOptions);
-
-      const imgFront = canvasFront.toDataURL('image/jpeg', 0.98);
-      const imgBack = canvasBack.toDataURL('image/jpeg', 0.98);
+      const [imgFront, imgBack] = await Promise.all([
+        captureElementImage(frontCapture.element, captureSize, fontEmbedCSS),
+        captureElementImage(backCapture.element, captureSize, fontEmbedCSS)
+      ]);
 
       const filename = `${studentName.trim().replace(/\s+/g, '_')}_ID_${idNumber.replace(/\s+/g, '_')}.pdf`;
 
@@ -265,11 +277,11 @@ export async function downloadIDCardPDF(
         });
 
         // Page 1: Front
-        pdf.addImage(imgFront, 'JPEG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+        pdf.addImage(imgFront, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
         
         // Page 2: Back
         pdf.addPage([cardWidth, cardHeight], orientation);
-        pdf.addImage(imgBack, 'JPEG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+        pdf.addImage(imgBack, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
 
         pdf.save(filename);
       } else {
@@ -307,7 +319,7 @@ export async function downloadIDCardPDF(
         pdf.rect(xOffset - 0.5, 37.5, cardWidth + 1, cardHeight + 1, 'S');
 
         // Draw client front side
-        pdf.addImage(imgFront, 'JPEG', xOffset, 38, cardWidth, cardHeight, undefined, 'FAST');
+        pdf.addImage(imgFront, 'PNG', xOffset, 38, cardWidth, cardHeight, undefined, 'FAST');
 
         // -- BACK CARD SECTION --
         const backYText = isLandscape ? 114 : 138;
@@ -322,7 +334,7 @@ export async function downloadIDCardPDF(
         pdf.rect(xOffset - 0.5, backYImage - 0.5, cardWidth + 1, cardHeight + 1, 'S');
 
         // Draw client back side
-        pdf.addImage(imgBack, 'JPEG', xOffset, backYImage, cardWidth, cardHeight, undefined, 'FAST');
+        pdf.addImage(imgBack, 'PNG', xOffset, backYImage, cardWidth, cardHeight, undefined, 'FAST');
 
         // Footnote information
         pdf.setFont('helvetica', 'italic');
