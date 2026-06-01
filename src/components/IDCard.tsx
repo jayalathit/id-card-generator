@@ -961,26 +961,24 @@ export const IDCard: React.FC<IDCardProps> = ({
       </div>
 
       {/* High Fidelity Curved Header Wave block */}
-      <div className="relative z-10 w-full bg-[#0c2340] pt-[28px] pb-[18px] px-[18px] flex flex-col justify-end text-white select-none shadow-md" {...editorProps('front-header')}>
+      <div className="relative z-10 w-full bg-[#0c2340] pt-[28px] pb-[16px] px-[18px] flex flex-col justify-end text-white select-none shadow-md" {...editorProps('front-header')}>
         
         {/* Centered institution brand */}
         <div className="flex items-center justify-center">
-          <div className="flex items-center justify-center gap-3 select-none">
-            <div className="w-[64px] h-[64px] flex items-center justify-center overflow-hidden shrink-0">
-              <BrandLogo size={64} />
+          <div className="flex flex-col items-center justify-center select-none">
+            <div className="w-[52px] h-[52px] flex items-center justify-center overflow-hidden shrink-0">
+              <BrandLogo size={52} />
             </div>
-            <div className="flex flex-col items-center text-center">
-              <img
-                src={jayalathWordmarkUrl}
-                alt="JAYALATH"
-                className="h-[34px] w-[245px] object-contain object-center"
-                draggable={false}
-              />
-              <span className="font-sans font-extrabold text-[7.2px] text-[#e2a812] uppercase tracking-[0.045em] block mt-[2px] leading-[1.05] text-center w-[245px]">
-                <span className="block">CAMPUS FOR CAREER EDUCATION</span>
-                <span className="block">& TRAINING INSTITUTE</span>
-              </span>
-            </div>
+            <img
+              src={jayalathWordmarkUrl}
+              alt="JAYALATH"
+              className="h-[27px] w-[210px] object-contain object-center mt-[4px]"
+              draggable={false}
+            />
+            <span className="font-sans font-extrabold text-[6.6px] text-[#e2a812] uppercase tracking-[0.04em] block mt-[2px] leading-[1.05] text-center w-[210px]">
+              <span className="block">CAMPUS FOR CAREER EDUCATION</span>
+              <span className="block">& TRAINING INSTITUTE</span>
+            </span>
           </div>
         </div>
 
