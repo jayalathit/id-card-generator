@@ -88,49 +88,6 @@ function websiteFromVerificationUrl(value: string | undefined): string {
   return trimmed.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/verification\/?$/i, '') || DEFAULT_WEBSITE;
 }
 
-function JayalathCampusHeadline({
-  label,
-  variant,
-  align = 'left',
-  className = '',
-  wordmarkClassName = '',
-  campusClassName = ''
-}: {
-  label: string;
-  variant: 'dark' | 'light';
-  align?: 'left' | 'right';
-  className?: string;
-  wordmarkClassName?: string;
-  campusClassName?: string;
-}) {
-  const title = label.trim() || 'JAYALATH CAMPUS';
-  const match = title.match(/^jayalath\b/i);
-  const titleColor = variant === 'light' ? 'text-white' : 'text-[#0c2340]';
-
-  if (!match) {
-    return (
-      <span className={`font-sans font-black uppercase leading-none tracking-tight ${titleColor} ${className}`}>
-        {title}
-      </span>
-    );
-  }
-
-  const remainder = title.slice(match[0].length).trim() || 'CAMPUS';
-  const justify = align === 'right' ? 'justify-end text-right' : 'justify-start text-left';
-
-  return (
-    <span className={`font-sans font-black uppercase leading-none tracking-tight ${titleColor} flex items-end gap-1.5 ${justify} ${className}`}>
-      <img
-        src={jayalathWordmarkUrl}
-        alt="JAYALATH"
-        className={`block object-contain ${wordmarkClassName}`}
-        draggable={false}
-      />
-      {remainder && <span className={`leading-none ${campusClassName}`}>{remainder}</span>}
-    </span>
-  );
-}
-
 export const IDCard: React.FC<IDCardProps> = ({
   student,
   config,
@@ -323,6 +280,56 @@ export const IDCard: React.FC<IDCardProps> = ({
     )
   );
 
+  const OperatorJayalathBrand = ({
+    logoSize = 42,
+    wordmarkWidth = 155,
+    wordmarkHeight = 25,
+    campusSize = 25,
+    taglineSize = 5.8,
+    taglineWidth = 226,
+    dark = false
+  }: {
+    logoSize?: number;
+    wordmarkWidth?: number;
+    wordmarkHeight?: number;
+    campusSize?: number;
+    taglineSize?: number;
+    taglineWidth?: number;
+    dark?: boolean;
+  }) => (
+    <div className="inline-flex items-center justify-center select-none">
+      <div
+        className="flex items-center justify-center overflow-hidden shrink-0"
+        style={{ width: logoSize, height: logoSize }}
+      >
+        <BrandLogo size={logoSize} />
+      </div>
+      <div className="flex flex-col justify-center pl-2.5 leading-none">
+        <div className="flex items-end justify-center leading-none">
+          <img
+            src={jayalathWordmarkUrl}
+            alt="JAYALATH"
+            className="object-contain object-left"
+            style={{ width: wordmarkWidth, height: wordmarkHeight }}
+            draggable={false}
+          />
+          <span
+            className={`${dark ? 'text-white' : 'text-[#0c2340]'} font-sans font-black tracking-tight uppercase leading-none ml-1`}
+            style={{ fontSize: campusSize }}
+          >
+            CAMPUS
+          </span>
+        </div>
+        <span
+          className={`${dark ? 'text-[#e2a812]' : 'text-slate-500'} font-sans font-black uppercase tracking-[0.045em] leading-none text-center block mt-[3px]`}
+          style={{ width: taglineWidth, fontSize: taglineSize }}
+        >
+          CAREER EDUCATION &amp; TRAINING INSTITUTE
+        </span>
+      </div>
+    </div>
+  );
+
   // High-fidelity graphic watermarks of Forklift or Backhoe Loader
   const ForkliftWatermark = () => (
     <svg width="180" height="180" viewBox="0 0 100 100" fill="currentColor" className="w-[180px] h-[180px] text-[#0c2340] opacity-[0.03] select-none pointer-events-none">
@@ -384,23 +391,15 @@ export const IDCard: React.FC<IDCardProps> = ({
             </div>
 
             {/* Header right: Institution brand model logo */}
-            <div className="flex items-center gap-2 pr-1">
-              <div className="w-9 h-9 flex items-center justify-center">
-                <BrandLogo size={34} />
-              </div>
-              <div className="flex flex-col leading-none text-left w-[82px]">
-                <img
-                  src={jayalathWordmarkUrl}
-                  alt="JAYALATH"
-                  className="h-[15px] w-[82px] object-contain object-left"
-                  draggable={false}
-                />
-                <span className="flex w-[82px] items-center justify-between text-[7.2px] font-extrabold text-slate-500 uppercase mt-[2.5px] leading-none">
-                  {'CAMPUS'.split('').map((letter) => (
-                    <span key={letter}>{letter}</span>
-                  ))}
-                </span>
-              </div>
+            <div className="flex items-center justify-center pr-1">
+              <OperatorJayalathBrand
+                logoSize={30}
+                wordmarkWidth={70}
+                wordmarkHeight={15}
+                campusSize={14}
+                taglineSize={3.4}
+                taglineWidth={112}
+              />
             </div>
           </div>
 
@@ -579,23 +578,16 @@ export const IDCard: React.FC<IDCardProps> = ({
 
           {/* Top Row Header area */}
           <div className="relative z-10 flex items-center justify-between" {...editorProps('front-header')}>
-            {/* Header left: Logo Box & JAYALATH Campus text */}
-            <div className="flex items-center select-none">
-              <div className="w-[58px] h-[58px] flex items-center justify-center overflow-hidden shrink-0">
-                <BrandLogo size={52} />
-              </div>
-              <div className="flex flex-col text-left pl-3.5">
-                <JayalathCampusHeadline
-                  label={templateDetails.leftMainHeader || 'JAYALATH CAMPUS'}
-                  variant="dark"
-                  className="text-[28px]"
-                  wordmarkClassName="h-[28px] w-auto"
-                  campusClassName="text-[28px]"
-                />
-                <span className="text-[7px] font-black text-slate-500 leading-tight tracking-wider uppercase mt-[3px] max-w-[210px] block">
-                  {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
-                </span>
-              </div>
+            {/* Header left: balanced Jayalath Campus brand lockup */}
+            <div className="flex items-center justify-center min-w-[310px]">
+              <OperatorJayalathBrand
+                logoSize={48}
+                wordmarkWidth={150}
+                wordmarkHeight={25}
+                campusSize={24}
+                taglineSize={5.8}
+                taglineWidth={235}
+              />
             </div>
 
             {/* Subdued Vertical Divider line */}
