@@ -965,16 +965,21 @@ export const IDCard: React.FC<IDCardProps> = ({
         
         {/* Centered institution brand */}
         <div className="flex items-center justify-center">
-          <div className="flex flex-col items-center text-center select-none">
-            <img
-              src={jayalathWordmarkUrl}
-              alt="JAYALATH"
-              className="h-[34px] w-[245px] object-contain object-center"
-              draggable={false}
-            />
-            <span className="font-sans font-extrabold text-[8.5px] text-[#e2a812] uppercase tracking-[0.035em] block mt-[2px] leading-none text-center whitespace-nowrap">
-              CAMPUS FOR {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
-            </span>
+          <div className="flex items-center justify-center gap-3 select-none">
+            <div className="w-[64px] h-[64px] flex items-center justify-center overflow-hidden shrink-0">
+              <BrandLogo size={64} />
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={jayalathWordmarkUrl}
+                alt="JAYALATH"
+                className="h-[34px] w-[245px] object-contain object-center"
+                draggable={false}
+              />
+              <span className="font-sans font-extrabold text-[8.5px] text-[#e2a812] uppercase tracking-[0.035em] block mt-[2px] leading-none text-center whitespace-nowrap">
+                CAMPUS FOR {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
+              </span>
+            </div>
           </div>
         </div>
 
