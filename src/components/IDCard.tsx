@@ -284,47 +284,38 @@ export const IDCard: React.FC<IDCardProps> = ({
     logoSize = 42,
     wordmarkWidth = 155,
     wordmarkHeight = 25,
-    campusSize = 25,
     taglineSize = 5.8,
-    taglineWidth = 226,
-    dark = false
+    showLogo = true
   }: {
     logoSize?: number;
     wordmarkWidth?: number;
     wordmarkHeight?: number;
-    campusSize?: number;
     taglineSize?: number;
-    taglineWidth?: number;
-    dark?: boolean;
+    showLogo?: boolean;
   }) => (
     <div className="inline-flex items-center justify-center select-none">
-      <div
-        className="flex items-center justify-center overflow-hidden shrink-0"
-        style={{ width: logoSize, height: logoSize }}
-      >
-        <BrandLogo size={logoSize} />
-      </div>
-      <div className="flex flex-col justify-center pl-2.5 leading-none">
-        <div className="flex items-end justify-center leading-none">
-          <img
-            src={jayalathWordmarkUrl}
-            alt="JAYALATH"
-            className="object-contain object-left"
-            style={{ width: wordmarkWidth, height: wordmarkHeight }}
-            draggable={false}
-          />
-          <span
-            className={`${dark ? 'text-white' : 'text-[#0c2340]'} font-sans font-black tracking-tight uppercase leading-none ml-1`}
-            style={{ fontSize: campusSize }}
-          >
-            CAMPUS
-          </span>
-        </div>
-        <span
-          className={`${dark ? 'text-[#e2a812]' : 'text-slate-500'} font-sans font-black uppercase tracking-[0.045em] leading-none text-center block mt-[3px]`}
-          style={{ width: taglineWidth, fontSize: taglineSize }}
+      {showLogo && (
+        <div
+          className="flex items-center justify-center overflow-hidden shrink-0 mr-2.5"
+          style={{ width: logoSize, height: logoSize }}
         >
-          CAREER EDUCATION &amp; TRAINING INSTITUTE
+          <BrandLogo size={logoSize} />
+        </div>
+      )}
+      <div className="flex flex-col items-center justify-center leading-none">
+        <img
+          src={jayalathWordmarkUrl}
+          alt="JAYALATH"
+          className="object-contain object-center"
+          style={{ width: wordmarkWidth, height: wordmarkHeight }}
+          draggable={false}
+        />
+        <span
+          className="text-[#e2a812] font-sans font-black uppercase tracking-[0.035em] leading-[0.92] text-center block mt-[1px]"
+          style={{ width: wordmarkWidth, fontSize: taglineSize }}
+        >
+          <span className="block">CAMPUS FOR CAREER EDUCATION</span>
+          <span className="block">&amp; TRAINING INSTITUTE</span>
         </span>
       </div>
     </div>
@@ -393,12 +384,10 @@ export const IDCard: React.FC<IDCardProps> = ({
             {/* Header right: Institution brand model logo */}
             <div className="flex items-center justify-center pr-1">
               <OperatorJayalathBrand
-                logoSize={30}
-                wordmarkWidth={70}
-                wordmarkHeight={15}
-                campusSize={14}
-                taglineSize={3.4}
-                taglineWidth={112}
+                logoSize={28}
+                wordmarkWidth={82}
+                wordmarkHeight={19}
+                taglineSize={3.7}
               />
             </div>
           </div>
@@ -582,11 +571,9 @@ export const IDCard: React.FC<IDCardProps> = ({
             <div className="flex items-center justify-center min-w-[310px]">
               <OperatorJayalathBrand
                 logoSize={48}
-                wordmarkWidth={150}
-                wordmarkHeight={25}
-                campusSize={24}
-                taglineSize={5.8}
-                taglineWidth={235}
+                wordmarkWidth={190}
+                wordmarkHeight={38}
+                taglineSize={6.8}
               />
             </div>
 
