@@ -976,8 +976,9 @@ export const IDCard: React.FC<IDCardProps> = ({
                 className="h-[34px] w-[245px] object-contain object-center"
                 draggable={false}
               />
-              <span className="font-sans font-extrabold text-[8.5px] text-[#e2a812] uppercase tracking-[0.035em] block mt-[2px] leading-none text-center whitespace-nowrap">
-                CAMPUS FOR {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
+              <span className="font-sans font-extrabold text-[7.2px] text-[#e2a812] uppercase tracking-[0.045em] block mt-[2px] leading-[1.05] text-center w-[245px]">
+                <span className="block">CAMPUS FOR CAREER EDUCATION</span>
+                <span className="block">& TRAINING INSTITUTE</span>
               </span>
             </div>
           </div>
