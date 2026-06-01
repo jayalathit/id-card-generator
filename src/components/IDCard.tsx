@@ -963,26 +963,17 @@ export const IDCard: React.FC<IDCardProps> = ({
       {/* High Fidelity Curved Header Wave block */}
       <div className="relative z-10 w-full bg-[#0c2340] pt-[28px] pb-[18px] px-[18px] flex flex-col justify-end text-white select-none shadow-md" {...editorProps('front-header')}>
         
-        {/* Upper Logo Area */}
-        <div className="flex justify-between items-center gap-3">
-          
-          {/* Institution logo */}
-          <div className="w-[78px] h-[78px] flex items-center justify-center overflow-hidden flex-shrink-0">
-            <BrandLogo size={78} />
-          </div>
-
-          {/* Institution Names Column */}
-          <div className="flex-1 text-right pr-1">
-            <JayalathCampusHeadline
-              label={templateDetails.leftMainHeader || "JAYALATH CAMPUS"}
-              variant="light"
-              align="right"
-              className="text-[27px]"
-              wordmarkClassName="h-[27px] w-auto"
-              campusClassName="text-[27px]"
+        {/* Centered institution brand */}
+        <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center text-center select-none">
+            <img
+              src={jayalathWordmarkUrl}
+              alt="JAYALATH"
+              className="h-[34px] w-[245px] object-contain object-center"
+              draggable={false}
             />
-            <span className="font-sans font-extrabold text-[7.5px] text-[#e2a812] uppercase tracking-wide block mt-[3px] leading-tight text-right">
-              {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
+            <span className="font-sans font-extrabold text-[8.5px] text-[#e2a812] uppercase tracking-[0.035em] block mt-[2px] leading-none text-center whitespace-nowrap">
+              CAMPUS FOR {templateDetails.leftSubHeader || "CAREER EDUCATION & TRAINING INSTITUTE"}
             </span>
           </div>
         </div>
