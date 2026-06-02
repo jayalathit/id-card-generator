@@ -541,7 +541,7 @@ export const IDCard: React.FC<IDCardProps> = ({
       const infoRows = [
         { label: 'NIC NO.', value: student.nic || '199012345V', icon: Fingerprint },
         { label: 'NAME', value: student.name || 'JOHN PERERA', icon: User },
-        { label: 'ID NUMBER', value: student.idNumber || 'HMA/FL/FC/2026/000001', icon: Award },
+        { label: 'ID NUMBER', value: student.idNumber || '', icon: Award },
         { label: 'GRADE', value: student.grade || 'A', icon: ShieldCheck },
         { label: 'COURSE', value: student.course || (equipment_type === 'forklift' ? 'FORKLIFT OPERATOR CERTIFICATION' : 'BACKHOE LOADER CERTIFICATION'), icon: BookOpen },
         { label: 'ISSUE DATE', value: student.issueDate || '26/05/2026', icon: Calendar },
@@ -1018,7 +1018,7 @@ export const IDCard: React.FC<IDCardProps> = ({
                 STUDENT / TRAINEE ID NO.
               </span>
               <span className="text-[10px] font-black text-[#0c2340] font-mono border-b border-slate-100 pb-[3px] leading-tight tracking-tight select-all whitespace-nowrap">
-                {String(student.idNumber || "HMA/FL/FC/2026/000001").toUpperCase()}
+                {String(student.idNumber || "").toUpperCase()}
               </span>
             </div>
 

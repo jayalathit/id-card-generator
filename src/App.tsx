@@ -15,7 +15,6 @@ import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, Re
 import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
 
 type TrainingMethod = 'FC' | 'TT' | 'GAP';
-const MIN_FUTURE_STUDENT_SERIAL = 10920;
 
 const MAIN_FIELD_OPTIONS = [
   { code: 'HMA', label: 'Heavy Machinery', enabled: true },
@@ -183,7 +182,7 @@ export default function App() {
   const [formMainField, setFormMainField] = useState('HMA');
   const [formTrainingMethod, setFormTrainingMethod] = useState<TrainingMethod>('FC');
   const [formIdYear, setFormIdYear] = useState('2026');
-  const [formSerial, setFormSerial] = useState('000001');
+  const [formSerial, setFormSerial] = useState('');
   const [formStudentLookupId, setFormStudentLookupId] = useState('');
   const [operatorLookupMessage, setOperatorLookupMessage] = useState('');
   const [linkedStudentId, setLinkedStudentId] = useState<string | null>(null);
@@ -233,7 +232,10 @@ export default function App() {
   }, [session]);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId) || students[0];
-  const generatedIdNumber = generatedCredentialId(formMainField, formEquipmentType, formTrainingMethod, formIdYear, formSerial);
+  const cleanSerial = formSerial.trim();
+  const generatedIdNumber = cleanSerial
+    ? generatedCredentialId(formMainField, formEquipmentType, formTrainingMethod, formIdYear, cleanSerial)
+    : '';
 
   const previewStudent: Student = isEditing ? {
     id: editingStudentId || 'student-preview',
@@ -288,12 +290,6 @@ export default function App() {
   const handleAddNewClick = () => {
     setEditingStudentId(null);
     setIsEditing(true);
-    // Auto-generate realistic next ID code
-    const highestSerial = students.reduce((max, student) => {
-      const match = student.idNumber.match(/\/(\d{6})$/);
-      return Math.max(max, match ? Number(match[1]) : 0);
-    }, Math.max(students.length, MIN_FUTURE_STUDENT_SERIAL - 1));
-    const paddedNum = String(highestSerial + 1).padStart(6, '0');
     
     setFormNic('');
     setFormName('');
@@ -307,7 +303,7 @@ export default function App() {
     setFormMainField('HMA');
     setFormTrainingMethod('FC');
     setFormIdYear(String(new Date().getFullYear()));
-    setFormSerial(paddedNum);
+    setFormSerial('');
     setFormGrade('A');
     setFormCourse('Forklift Operator Training');
     setFormEquipmentClass('Counterbalance Forklift / Class A');
@@ -469,12 +465,16 @@ export default function App() {
   // Save Operator Record
   const handleSaveStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formNic.trim() || !generatedIdNumber.trim()) {
-      alert('Please fill out Name, NIC, and ID Number.');
+    if (!formName.trim() || !formNic.trim()) {
+      alert('Please fill out Name and NIC.');
       return;
     }
     if (!/^\d{4}$/.test(formIdYear)) {
       alert('Please enter a four-digit issuing year.');
+      return;
+    }
+    if (!/^\d{6}$/.test(cleanSerial)) {
+      alert('Please enter a 6-digit serial number manually.');
       return;
     }
 
@@ -1009,11 +1009,23 @@ export default function App() {
                       <input value={formIdYear} onChange={(e) => setFormIdYear(e.target.value.replace(/\D/g, '').slice(0, 4))} className="border border-natural-darkborder p-1.5 text-xs text-natural-darktext" maxLength={4} />
                     </label>
                     <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Serial
-                      <input value={formSerial} readOnly className="border border-natural-border bg-natural-panel p-1.5 text-xs text-natural-darktext font-bold" />
+                      <input
+                        value={formSerial}
+                        onChange={(e) => setFormSerial(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="border border-natural-darkborder bg-white p-1.5 text-xs text-natural-darktext font-bold outline-none focus:border-natural-sage"
+                        placeholder="e.g. 010920"
+                        inputMode="numeric"
+                        maxLength={6}
+                      />
                     </label>
                   </div>
                   <label className="flex flex-col gap-1 text-[9px] font-bold text-natural-muted uppercase">Generated {formCardDesignation === 'operator' ? 'Operator' : 'Student'} ID
-                    <input value={generatedIdNumber} readOnly className="border border-natural-darkborder bg-natural-panel px-3 py-2 text-xs text-[#0c2340] font-black tracking-wide" />
+                    <input
+                      value={generatedIdNumber}
+                      readOnly
+                      placeholder="Enter the serial number to generate the ID"
+                      className="border border-natural-darkborder bg-natural-panel px-3 py-2 text-xs text-[#0c2340] font-black tracking-wide placeholder:text-natural-muted placeholder:font-semibold"
+                    />
                   </label>
                 </div>
 
