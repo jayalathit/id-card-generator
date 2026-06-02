@@ -10,6 +10,7 @@ import jayalathWordmarkUrl from '../assets/jayalath-wordmark.png';
 import associateChiuTengUrl from '../assets/associate-chiu-teng.png';
 import associateGlobalWorkforceUrl from '../assets/associate-global-workforce.png';
 import associateOverseasVocationalUrl from '../assets/associate-overseas-vocational.png';
+import adminDepartmentSignatureUrl from '../assets/admin-department-signature.png';
 import { baseCanvasElement, getCanvasElement, surfaceFor, TEMPLATE_LAYERS } from '../designLayers';
 import { 
   User, 
@@ -124,6 +125,13 @@ export const IDCard: React.FC<IDCardProps> = ({
   const surface = surfaceFor(card_designation, showBack);
   const layoutElements = config.canvasElements || [];
   const dragRef = useRef<{ id: string; pointerId: number; startX: number; startY: number; x: number; y: number } | null>(null);
+  const adminSignatureImage = config.adminSignatureImage?.startsWith('data:')
+    ? config.adminSignatureImage
+    : adminDepartmentSignatureUrl;
+  const operatorDefaultSignatureImage = adminDepartmentSignatureUrl;
+  const operatorSignatureImage = student.signatureType !== 'typed' && student.signatureImage?.startsWith('data:')
+    ? student.signatureImage
+    : operatorDefaultSignatureImage;
 
   const layerValue = (id: string): CanvasElement => {
     const name = TEMPLATE_LAYERS[surface].find((layer) => layer.id === id)?.name || id;
@@ -675,18 +683,12 @@ export const IDCard: React.FC<IDCardProps> = ({
 
               {/* Signature section below photo */}
               <div className="flex flex-col items-center justify-center mt-2 z-10 w-[166px]">
-                <div className="relative h-7 flex items-center justify-center w-full">
-                  {student.signatureType === 'typed' ? (
-                    <span className="font-formal-sig text-[21px] text-[#0c2340] leading-none select-none pointer-events-none whitespace-nowrap">
-                      {student.signatureText || "Admin Department"}
-                    </span>
-                  ) : student.signatureImage ? (
-                    <img src={student.signatureImage} alt="Signature" className="h-7 max-w-[150px] object-contain select-none pointer-events-none" />
-                  ) : (
-                    <span className="font-signature text-[18px] text-slate-400 italic font-medium">
-                      {student.name || "John Perera"}
-                    </span>
-                  )}
+                <div className="relative h-11 flex items-end justify-center w-full pb-0.5">
+                  <img
+                    src={operatorSignatureImage}
+                    alt="Admin department signature"
+                    className="max-h-11 max-w-[156px] object-contain select-none pointer-events-none"
+                  />
                 </div>
                 {/* Horizontal signature line */}
                 <div className="w-full h-[1px] bg-slate-400" />
@@ -1094,17 +1096,11 @@ export const IDCard: React.FC<IDCardProps> = ({
         <div className="mt-4 flex justify-end px-1 border-t border-slate-100 pt-3" {...editorProps('front-signature')}>
           <div className="w-[178px] flex flex-col items-center leading-none">
             <div className="h-11 w-full flex items-end justify-center pb-1">
-              {config.adminSignatureImage ? (
-                <img
-                  src={config.adminSignatureImage}
-                  alt="Admin department signature"
-                  className="max-h-10 max-w-[168px] object-contain select-none pointer-events-none"
-                />
-              ) : (
-                <span className="font-formal-sig text-[30px] text-[#0c2340] leading-none select-none pointer-events-none whitespace-nowrap">
-                  {config.adminSignatureText || 'Admin Department'}
-                </span>
-              )}
+              <img
+                src={adminSignatureImage}
+                alt="Admin department signature"
+                className="max-h-10 max-w-[168px] object-contain select-none pointer-events-none"
+              />
             </div>
             <div className="w-full h-[1px] bg-slate-300" />
             <span className="text-[6.5px] font-black text-slate-400 tracking-[0.14em] uppercase block mt-1.5 text-center">

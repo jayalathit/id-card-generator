@@ -13,6 +13,7 @@ import { supabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
 import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
+import adminDepartmentSignatureUrl from './assets/admin-department-signature.png';
 
 type TrainingMethod = 'FC' | 'TT' | 'GAP';
 
@@ -277,6 +278,9 @@ export default function App() {
     : undefined;
   const isOperatorPreview = activePreviewStudent.cardDesignation === 'operator';
   const isExpandedPreview = isOperatorPreview && viewMode === 'both';
+  const adminSignaturePreviewImage = config.adminSignatureImage?.startsWith('data:')
+    ? config.adminSignatureImage
+    : adminDepartmentSignatureUrl;
 
   const updateActiveTemplateDetails = (changes: Partial<TemplateDetails>) => {
     const key = templateCardDesignation === 'operator' ? 'operatorDetails' : 'studentDetails';
@@ -1581,13 +1585,7 @@ export default function App() {
                   />
                   <div className="flex items-center gap-3">
                     <div className="w-28 h-12 border border-natural-border bg-natural-panel flex items-center justify-center overflow-hidden">
-                      {config.adminSignatureImage ? (
-                        <img src={config.adminSignatureImage} alt="Admin signature preview" className="max-w-full max-h-full object-contain" />
-                      ) : (
-                        <span className="font-formal-sig text-[24px] text-[#0c2340] leading-none">
-                          {config.adminSignatureText.trim() || 'Admin Department'}
-                        </span>
-                      )}
+                      <img src={adminSignaturePreviewImage} alt="Admin signature preview" className="max-w-full max-h-full object-contain" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="inline-flex items-center gap-1 border border-natural-darkborder bg-natural-panel px-3 py-1.5 text-[9px] font-bold uppercase text-natural-darktext cursor-pointer hover:bg-natural-sand">
