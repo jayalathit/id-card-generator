@@ -286,6 +286,14 @@ export default function App() {
     }));
   };
 
+  const handleSelectStudent = (studentId: string) => {
+    setIsEditing(false);
+    setEditingStudentId(null);
+    setSelectedCanvasLayer(null);
+    setSelectedStudentId(studentId);
+    setActiveTab('students');
+  };
+
   // Helper to start adding a student
   const handleAddNewClick = () => {
     setEditingStudentId(null);
@@ -535,7 +543,7 @@ export default function App() {
           student.id === editingStudentId ? storedStudent : student
         )));
       } else {
-        setStudents((previous) => [...previous, storedStudent]);
+        setStudents((previous) => [storedStudent, ...previous]);
       }
       setSelectedStudentId(storedStudent.id);
       setIsEditing(false);
@@ -1278,7 +1286,7 @@ export default function App() {
                   return (
                     <div
                       key={student.id}
-                      onClick={() => setSelectedStudentId(student.id)}
+                      onClick={() => handleSelectStudent(student.id)}
                       className={`p-3 rounded-xl border transition-all cursor-pointer flex justify-between items-center ${isSelected ? 'bg-white border-natural-sage shadow-md' : 'bg-white border-natural-border hover:border-natural-darkborder'}`}
                     >
                       <div className="flex items-center gap-2.5 overflow-hidden">

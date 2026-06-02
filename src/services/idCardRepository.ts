@@ -226,7 +226,7 @@ async function hydrateConfig(row: ConfigRow): Promise<CardConfig> {
 
 export async function loadWorkspaceData(defaultConfig: CardConfig): Promise<{ students: Student[]; config: CardConfig }> {
   const [studentResponse, configResponse] = await Promise.all([
-    supabase.from('students').select('*').order('created_at', { ascending: true }),
+    supabase.from('students').select('*').order('created_at', { ascending: false }),
     supabase.from('card_config').select('*').eq('id', 1).maybeSingle()
   ]);
 
