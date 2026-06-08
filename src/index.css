@@ -113,8 +113,8 @@ body {
 
 @media (min-width: 1024px) and (max-width: 1279px) {
   .preview-card-frame--operator {
-    width: 568px;
-    height: 364px;
+    width: 575px;
+    height: 371px;
   }
 
   .preview-card-frame--operator .preview-card-paper {
@@ -128,8 +128,8 @@ body {
   }
 
   .preview-card-frame--operator {
-    width: 334px;
-    height: 214px;
+    width: 338px;
+    height: 218px;
   }
 
   .preview-card-frame--operator .preview-card-paper {
@@ -148,8 +148,8 @@ body {
 
 @media (max-width: 350px) {
   .preview-card-frame--operator {
-    width: 287px;
-    height: 184px;
+    width: 291px;
+    height: 188px;
   }
 
   .preview-card-frame--operator .preview-card-paper {

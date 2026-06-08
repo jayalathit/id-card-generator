@@ -1886,8 +1886,8 @@ export default function App() {
         <div 
           id={`card-capture-front-${activePreviewStudent.id}`}
           style={{
-            width: activePreviewStudent.cardDesignation === 'operator' ? '650px' : '410px',
-            height: activePreviewStudent.cardDesignation === 'operator' ? '410px' : '650px',
+            width: activePreviewStudent.cardDesignation === 'operator' ? '660px' : '410px',
+            height: activePreviewStudent.cardDesignation === 'operator' ? '420px' : '650px',
             boxSizing: 'border-box'
           }}
         >
@@ -1896,8 +1896,8 @@ export default function App() {
         <div 
           id={`card-capture-back-${activePreviewStudent.id}`}
           style={{
-            width: activePreviewStudent.cardDesignation === 'operator' ? '650px' : '410px',
-            height: activePreviewStudent.cardDesignation === 'operator' ? '410px' : '650px',
+            width: activePreviewStudent.cardDesignation === 'operator' ? '660px' : '410px',
+            height: activePreviewStudent.cardDesignation === 'operator' ? '420px' : '650px',
             boxSizing: 'border-box',
             marginTop: '32px'
           }}

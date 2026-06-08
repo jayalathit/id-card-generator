@@ -225,8 +225,8 @@ export async function downloadIDCardPDF(
 
     try {
       const isLandscape = orientation === 'landscape';
-      const captureWidth = isLandscape ? 650 : 410;
-      const captureHeight = isLandscape ? 410 : 650;
+      const captureWidth = isLandscape ? 660 : 410;
+      const captureHeight = isLandscape ? 420 : 650;
       const frontCapture = mountCaptureCopy(frontEl, captureWidth, captureHeight, 0);
       const backCapture = mountCaptureCopy(backEl, captureWidth, captureHeight, captureHeight + 24);
       captureCopies.push(frontCapture, backCapture);

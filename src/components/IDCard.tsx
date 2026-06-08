@@ -363,7 +363,7 @@ export const IDCard: React.FC<IDCardProps> = ({
         <div 
           id={`card-back-${student.id}`}
           className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
-          style={cardStyle('650px', '410px')}
+          style={cardStyle('660px', '420px')}
         >
           {/* Watermark in background */}
           <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" {...editorProps('back-watermark')}>
@@ -560,7 +560,7 @@ export const IDCard: React.FC<IDCardProps> = ({
         <div 
           id={`card-front-${student.id}`}
           className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
-          style={cardStyle('650px', '410px')}
+          style={cardStyle('660px', '420px')}
         >
           {/* Watermark in background */}
           <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" {...editorProps('front-watermark')}>
