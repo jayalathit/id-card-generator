@@ -235,8 +235,9 @@ async function captureCardImages(
     };
 
     const isLandscape = orientation === 'landscape';
-    const captureWidth = isLandscape ? 660 : 410;
-    const captureHeight = isLandscape ? 420 : 650;
+    const frontBounds = frontEl.getBoundingClientRect();
+    const captureWidth = Math.ceil(frontBounds.width) || (isLandscape ? 678 : 428);
+    const captureHeight = Math.ceil(frontBounds.height) || (isLandscape ? 438 : 668);
     const frontCapture = mountCaptureCopy(frontEl, captureWidth, captureHeight, 0);
     const backCapture = mountCaptureCopy(backEl, captureWidth, captureHeight, captureHeight + 24);
     captureCopies.push(frontCapture, backCapture);
@@ -419,27 +420,39 @@ export async function downloadIDCardJPEG(
     const frontImage = await loadDataUrlImage(images.front);
     const backImage = await loadDataUrlImage(images.back);
     const isLandscape = orientation === 'landscape';
-    const gap = isLandscape ? 24 : 36;
+    const gap = isLandscape ? 36 : 36;
     const padding = isLandscape ? 0 : 32;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return false;
 
-    canvas.width = Math.max(frontImage.naturalWidth, backImage.naturalWidth) + (padding * 2);
-    canvas.height = frontImage.naturalHeight + backImage.naturalHeight + gap + (padding * 2);
+    canvas.width = isLandscape
+      ? frontImage.naturalWidth + backImage.naturalWidth + gap + (padding * 2)
+      : Math.max(frontImage.naturalWidth, backImage.naturalWidth) + (padding * 2);
+    canvas.height = isLandscape
+      ? Math.max(frontImage.naturalHeight, backImage.naturalHeight) + (padding * 2)
+      : frontImage.naturalHeight + backImage.naturalHeight + gap + (padding * 2);
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    const frontX = Math.round((canvas.width - frontImage.naturalWidth) / 2);
-    const backX = Math.round((canvas.width - backImage.naturalWidth) / 2);
-    const frontY = padding;
-    const backY = padding + frontImage.naturalHeight + gap;
-
-    ctx.drawImage(frontImage, frontX, frontY);
-    ctx.drawImage(backImage, backX, backY);
+    if (isLandscape) {
+      const frontX = padding;
+      const frontY = Math.round((canvas.height - frontImage.naturalHeight) / 2);
+      const backX = padding + frontImage.naturalWidth + gap;
+      const backY = Math.round((canvas.height - backImage.naturalHeight) / 2);
+      ctx.drawImage(frontImage, frontX, frontY);
+      ctx.drawImage(backImage, backX, backY);
+    } else {
+      const frontX = Math.round((canvas.width - frontImage.naturalWidth) / 2);
+      const backX = Math.round((canvas.width - backImage.naturalWidth) / 2);
+      const frontY = padding;
+      const backY = padding + frontImage.naturalHeight + gap;
+      ctx.drawImage(frontImage, frontX, frontY);
+      ctx.drawImage(backImage, backX, backY);
+    }
 
     downloadDataUrl(canvas.toDataURL('image/jpeg', 0.98), safeFileName(studentName, idNumber, 'jpg'));
     return true;
