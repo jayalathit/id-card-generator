@@ -1817,11 +1817,11 @@ export default function App() {
                     <div className="flex flex-col">
                       <span className="font-extrabold text-xs text-natural-darktext uppercase tracking-wider block">ID Card Dimensions</span>
                       <span className="text-[9px] text-natural-sage mt-0.5 font-semibold block uppercase">
-                        {activePreviewStudent.cardDesignation === 'operator' ? '85.6mm x 54mm (CR80 Landscape)' : '54mm x 85.6mm (CR80 Portrait)'}
+                        {activePreviewStudent.cardDesignation === 'operator' ? '88mm x 56mm (full design)' : '54mm x 85.6mm (CR80 Portrait)'}
                       </span>
                     </div>
                     <span className="text-[10px] text-natural-text mt-2 leading-relaxed font-semibold">
-                      Best option for professional PVC card printers or individual ID slots. Generates a tight 2-page print PDF.
+                      Best option for professional PVC card printers. Operator IDs export at 88mm x 56mm with text kept inside the safe area.
                     </span>
                   </button>
 

@@ -409,10 +409,10 @@ export const IDCard: React.FC<IDCardProps> = ({
                   <ShieldCheck size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
-                  <span className="text-[8px] font-black text-[#0c2340] tracking-[0.18em] uppercase leading-none block">
+                  <span className="text-[8.6px] font-black text-[#0c2340] tracking-[0.16em] uppercase leading-none block">
                     Authorized Operator Credential
                   </span>
-                  <p className="text-[8.8px] font-semibold text-slate-600 leading-[1.32] mt-1.5 max-w-[270px]">
+                  <p className="text-[9.4px] font-semibold text-slate-600 leading-[1.28] mt-1.5 max-w-[270px]">
                     This card is an official identification for authorized heavy equipment operators only. It is non-transferable and must be carried while on duty.
                   </p>
                 </div>
@@ -423,10 +423,10 @@ export const IDCard: React.FC<IDCardProps> = ({
                   <Calendar size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
-                  <span className="text-[8px] font-black text-[#e2a812] uppercase tracking-[0.18em] leading-none block">
+                  <span className="text-[8.6px] font-black text-[#e2a812] uppercase tracking-[0.16em] leading-none block">
                     VALIDITY
                   </span>
-                  <p className="text-[8.8px] font-semibold text-slate-600 leading-[1.32] mt-1.5 max-w-[270px]">
+                  <p className="text-[9.4px] font-semibold text-slate-600 leading-[1.28] mt-1.5 max-w-[270px]">
                     This ID card is valid for <span className="text-[#0c2340] font-black uppercase">{templateDetails.validityYears} YEAR{templateDetails.validityYears === 1 ? '' : 'S'}</span> from the date of certification.
                   </p>
                 </div>
@@ -437,15 +437,15 @@ export const IDCard: React.FC<IDCardProps> = ({
                   <Award size={15} className="stroke-[2.5]" />
                 </div>
                 <div className="text-left">
-                  <span className="text-[8px] font-black text-[#0c2340] uppercase tracking-[0.18em] leading-none block">
+                  <span className="text-[8.6px] font-black text-[#0c2340] uppercase tracking-[0.16em] leading-none block">
                     Grade Classification Guide
                   </span>
                   <div className="grid grid-cols-3 gap-1.5 mt-1.5">
                     {OPERATOR_GRADE_GUIDE.map((item) => (
                       <div key={item.grade} className="border border-slate-200 bg-slate-50 px-1.5 py-1.5 min-h-[37px]">
-                        <span className="text-[10px] font-black text-[#0c2340] leading-none block">Grade {item.grade}</span>
-                        <span className="text-[7.2px] font-black text-[#e2a812] uppercase leading-none block mt-1">{item.marks}</span>
-                        <span className="text-[6.5px] font-bold text-slate-500 uppercase leading-none block mt-1">{item.label}</span>
+                        <span className="text-[10.6px] font-black text-[#0c2340] leading-none block">Grade {item.grade}</span>
+                        <span className="text-[7.7px] font-black text-[#e2a812] uppercase leading-none block mt-1">{item.marks}</span>
+                        <span className="text-[6.9px] font-bold text-slate-500 uppercase leading-none block mt-1">{item.label}</span>
                       </div>
                     ))}
                   </div>
@@ -457,7 +457,7 @@ export const IDCard: React.FC<IDCardProps> = ({
             <div className="col-span-5 flex justify-end" {...editorProps('back-verify')}>
               <div className="w-[196px] flex flex-col gap-2">
                 <div className="border border-slate-200 bg-white shadow-sm">
-                  <div className="h-[24px] bg-[#0c2340] flex items-center justify-center text-white text-[7.5px] font-black tracking-[0.2em] uppercase border-b-[3px] border-[#e2a812]">
+                  <div className="h-[24px] bg-[#0c2340] flex items-center justify-center text-white text-[8px] font-black tracking-[0.18em] uppercase border-b-[3px] border-[#e2a812]">
                     Verify Operator
                   </div>
                   <div className="p-2.5 flex flex-col items-center">
@@ -471,10 +471,10 @@ export const IDCard: React.FC<IDCardProps> = ({
                     <div className="mt-2 w-full border-t border-slate-100 pt-2 flex items-start gap-2">
                       <Globe size={12} className="text-[#e2a812] flex-shrink-0 mt-[1px]" />
                       <div className="flex flex-col leading-none text-left min-w-0">
-                        <span className="text-[6.5px] font-black text-slate-400 uppercase tracking-wider leading-none block">
+                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none block">
                           Website verification
                         </span>
-                        <span className="text-[7.4px] font-extrabold text-[#0c2340] tracking-wide block break-all leading-snug select-all mt-1">
+                        <span className="text-[7.9px] font-extrabold text-[#0c2340] tracking-wide block break-all leading-snug select-all mt-1">
                           {templateDetails.backVerificationUrl}
                         </span>
                       </div>
@@ -482,7 +482,7 @@ export const IDCard: React.FC<IDCardProps> = ({
                   </div>
                 </div>
                 <div className="border border-[#d8dee8] bg-white px-2 py-1.5 shadow-sm">
-                  <span className="block text-center text-[6.1px] font-black text-slate-400 uppercase tracking-[0.18em] leading-none">
+                  <span className="block text-center text-[6.6px] font-black text-slate-400 uppercase tracking-[0.16em] leading-none">
                     Associate Companies
                   </span>
                   <div className="grid grid-cols-3 gap-1.5 items-center mt-1.5">
@@ -505,8 +505,8 @@ export const IDCard: React.FC<IDCardProps> = ({
                 <MapPin size={12} className="text-[#e2a812] flex-shrink-0" />
               </div>
               <div className="text-left min-w-0">
-                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">HEAD OFFICE</strong>
-                <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{headOfficeAddress}</p>
+                <strong className="text-[9px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">HEAD OFFICE</strong>
+                <p className="text-[8.8px] font-semibold text-slate-500 mt-[5px] tracking-tight leading-normal whitespace-pre-wrap">{headOfficeAddress}</p>
               </div>
             </div>
             {/* Column 2 Contact */}
@@ -515,8 +515,8 @@ export const IDCard: React.FC<IDCardProps> = ({
                 <Phone size={12} className="text-[#e2a812] flex-shrink-0" />
               </div>
               <div className="text-left min-w-0">
-                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
-                <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{primaryContact}<br/>{secondaryContact}</p>
+                <strong className="text-[9px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">CONTACT</strong>
+                <p className="text-[8.8px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{primaryContact}<br/>{secondaryContact}</p>
               </div>
             </div>
             {/* Column 3 Website and email */}
@@ -525,8 +525,8 @@ export const IDCard: React.FC<IDCardProps> = ({
                 <Mail size={12} className="text-[#e2a812] flex-shrink-0" />
               </div>
               <div className="text-left min-w-0">
-                <strong className="text-[8.5px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">WEB / EMAIL</strong>
-                <p className="text-[8.2px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{website}<br/>{DEFAULT_EMAIL}</p>
+                <strong className="text-[9px] font-black text-[#0c2340] tracking-wider uppercase block leading-none">WEB / EMAIL</strong>
+                <p className="text-[8.8px] font-semibold text-slate-500 mt-[5px] leading-tight select-all">{website}<br/>{DEFAULT_EMAIL}</p>
               </div>
             </div>
           </div>
@@ -535,7 +535,7 @@ export const IDCard: React.FC<IDCardProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-[22px] bg-[#0c2340] pointer-events-none select-none flex items-center justify-center border-t border-slate-800" {...editorProps('back-footer')}>
             <div className="flex items-center gap-4 w-full px-6">
               <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#e2a812]/50" />
-              <span className="text-[8px] font-sans font-black text-white uppercase tracking-[0.2em] mt-0.5 shrink-0 block">
+              <span className="text-[8.6px] font-sans font-black text-white uppercase tracking-[0.18em] mt-0.5 shrink-0 block">
                 SAFETY FIRST. SKILLS ALWAYS.
               </span>
               <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#e2a812]/50" />
@@ -650,13 +650,13 @@ export const IDCard: React.FC<IDCardProps> = ({
                         <IconComp size={8.5} className="stroke-[3]" />
                       </div>
                       {/* Wide fixed label column preventing line wrap */}
-                      <span className="w-[96px] text-[7.1px] font-bold text-slate-500 uppercase tracking-widest block text-left shrink-0">
+                      <span className="w-[96px] text-[7.8px] font-bold text-slate-500 uppercase tracking-[0.16em] block text-left shrink-0">
                         {row.label}
                       </span>
                       {/* Aligned colons column */}
-                      <span className="text-[8.5px] font-black text-[#0c2340] block w-[9px] shrink-0 text-center pr-1">:</span>
+                      <span className="text-[9.2px] font-black text-[#0c2340] block w-[9px] shrink-0 text-center pr-1">:</span>
                       {/* Uppercase formatted bold values for elite card design */}
-                      <span className="flex-1 text-[8.5px] font-black text-[#0c2340] uppercase whitespace-nowrap leading-none mt-[1px] text-left select-all tracking-[0.02em] font-sans">
+                      <span className="flex-1 text-[9.2px] font-black text-[#0c2340] uppercase whitespace-nowrap leading-none mt-[1px] text-left select-all tracking-[0.015em] font-sans">
                         {String(row.value).toUpperCase()}
                       </span>
                     </div>
@@ -701,10 +701,10 @@ export const IDCard: React.FC<IDCardProps> = ({
 
           {/* Compact verification line; full QR verification is provided on the reverse side. */}
           <div className="absolute left-5 right-5 bottom-9 z-10 h-[28px] flex items-center justify-between border-t border-slate-100 pt-1.5" {...editorProps('front-verify')}>
-            <span className="w-[230px] text-[6.6px] font-black uppercase tracking-[0.14em] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis">
+            <span className="w-[230px] text-[7.1px] font-black uppercase tracking-[0.12em] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis">
               Issued by Jayalath Campus
             </span>
-            <span className="w-[245px] text-right text-[6.6px] font-black uppercase tracking-[0.09em] text-[#0c2340] whitespace-nowrap overflow-hidden text-ellipsis">
+            <span className="w-[245px] text-right text-[7.1px] font-black uppercase tracking-[0.075em] text-[#0c2340] whitespace-nowrap overflow-hidden text-ellipsis">
               Verify: {templateDetails.backVerificationUrl}
             </span>
           </div>
@@ -714,7 +714,7 @@ export const IDCard: React.FC<IDCardProps> = ({
             <div className="absolute left-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
             
             {/* Centered slogans with high spacing */}
-            <span className="text-[9px] font-sans font-black tracking-[0.16em] text-white uppercase z-10 mx-auto block leading-none">
+            <span className="text-[9.6px] font-sans font-black tracking-[0.135em] text-white uppercase z-10 mx-auto block leading-none">
               SAFE HANDS  •  SKILLED MINDS  •  STRONGER FUTURE
             </span>
 

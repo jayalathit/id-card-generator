@@ -267,8 +267,8 @@ export async function downloadIDCardPDF(
       const filename = `${studentName.trim().replace(/\s+/g, '_')}_ID_${idNumber.replace(/\s+/g, '_')}.pdf`;
 
       if (mode === 'exact') {
-        const cardWidth = isLandscape ? 85.6 : 54;
-        const cardHeight = isLandscape ? 54 : 85.6;
+        const cardWidth = isLandscape ? 88 : 54;
+        const cardHeight = isLandscape ? 56 : 85.6;
 
         const pdf = new jsPDF({
           orientation: orientation,
@@ -292,8 +292,8 @@ export async function downloadIDCardPDF(
           format: 'a4' // 210mm x 297mm
         });
 
-        const cardWidth = isLandscape ? 85.6 : 54;
-        const cardHeight = isLandscape ? 54 : 85.6;
+        const cardWidth = isLandscape ? 88 : 54;
+        const cardHeight = isLandscape ? 56 : 85.6;
         const xOffset = (210 - cardWidth) / 2;
 
         // Title & Instruction headers
