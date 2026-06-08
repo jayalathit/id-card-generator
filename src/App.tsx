@@ -7,11 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { Student, CardConfig, CanvasElement, TemplateDetails, TemplateSurface } from './types';
 import { IDCard } from './components/IDCard';
 import { SignaturePad } from './components/SignaturePad';
-import { downloadIDCardPDF } from './utils/pdfGenerator';
+import { downloadIDCardJPEG, downloadIDCardPDF } from './utils/pdfGenerator';
 import { deleteStudent, loadWorkspaceData, saveCardConfig, saveStudent } from './services/idCardRepository';
 import { supabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { Check, Edit2, Trash2, Plus, Download, Grid, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
+import { Check, Edit2, Trash2, Plus, Download, Grid, Image as ImageIcon, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
 import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
 import adminDepartmentSignatureUrl from './assets/admin-department-signature.png';
 
@@ -600,6 +600,25 @@ export default function App() {
       setIsGeneratingPdf(false);
       if (!success) {
         alert('There was an issue generating the PDF. Please check that elements are visible on screen.');
+      }
+    }, 400);
+  };
+
+  const handleDownloadJpeg = async () => {
+    if (!activePreviewStudent) return;
+    setIsGeneratingPdf(true);
+    setTimeout(async () => {
+      const isOperator = activePreviewStudent.cardDesignation === 'operator';
+      const success = await downloadIDCardJPEG(
+        activePreviewStudent.name,
+        activePreviewStudent.idNumber,
+        `card-capture-front-${activePreviewStudent.id}`,
+        `card-capture-back-${activePreviewStudent.id}`,
+        isOperator ? 'landscape' : 'portrait'
+      );
+      setIsGeneratingPdf(false);
+      if (!success) {
+        alert('There was an issue generating the JPEG image. Please check that elements are visible on screen.');
       }
     }, 400);
   };
@@ -1804,7 +1823,7 @@ export default function App() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Option 1: Double Sided ID Size download */}
                   <button
                     onClick={() => handleDownloadPdf('exact')}
@@ -1840,6 +1859,24 @@ export default function App() {
                     </div>
                     <span className="text-[10px] text-natural-text mt-2 leading-relaxed font-semibold">
                       Best for standard office papers. Centered front & back with safe dashed scissor borders for easy cutting.
+                    </span>
+                  </button>
+
+                  {/* Option 3: High quality image export */}
+                  <button
+                    onClick={handleDownloadJpeg}
+                    disabled={isGeneratingPdf}
+                    className="flex flex-col items-center text-center p-4 bg-natural-panel hover:bg-natural-sand disabled:opacity-50 border border-natural-border hover:border-natural-darkborder rounded-xl transition-all cursor-pointer select-none gap-2 group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-natural-sage/10 flex items-center justify-center text-natural-sage group-hover:bg-natural-sage/20 transition-colors">
+                      <ImageIcon className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-extrabold text-xs text-natural-darktext uppercase tracking-wider block">High Quality JPEG</span>
+                      <span className="text-[9px] text-natural-sage mt-0.5 font-semibold block uppercase">Front & back image sheet</span>
+                    </div>
+                    <span className="text-[10px] text-natural-text mt-2 leading-relaxed font-semibold">
+                      Exports the card artwork as one sharp image so you can test print quality without PDF scaling changes.
                     </span>
                   </button>
                 </div>

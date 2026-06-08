@@ -16,6 +16,13 @@ type CaptureSize = {
   height: number;
 };
 
+type CardCaptureImages = {
+  front: string;
+  back: string;
+  width: number;
+  height: number;
+};
+
 function mountCaptureCopy(source: HTMLElement, width: number, height: number, top: number): CaptureCopy {
   const host = document.createElement('div');
   Object.assign(host.style, {
@@ -68,6 +75,19 @@ async function captureElementImage(element: HTMLElement, size: CaptureSize, font
     },
     fontEmbedCSS
   });
+}
+
+function safeFileName(studentName: string, idNumber: string, extension: 'pdf' | 'jpg'): string {
+  return `${studentName.trim().replace(/\s+/g, '_')}_ID_${idNumber.replace(/\s+/g, '_')}.${extension}`;
+}
+
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 /**
@@ -167,32 +187,23 @@ export function parseAndConvertOklab(val: string): string {
   );
 }
 
-/**
- * Downloads high-fidelity operator card PDFs
- */
-export async function downloadIDCardPDF(
-  studentName: string,
-  idNumber: string,
+async function captureCardImages(
   frontElementId: string,
   backElementId: string,
-  mode: 'exact' | 'a4_sheet' = 'exact',
-  orientation: 'portrait' | 'landscape' = 'portrait'
-): Promise<boolean> {
+  orientation: 'portrait' | 'landscape'
+): Promise<CardCaptureImages | null> {
   const frontEl = document.getElementById(frontElementId);
   const backEl = document.getElementById(backElementId);
 
   if (!frontEl || !backEl) {
     console.error(`Cannot find elements: ${frontElementId} or ${backElementId}`);
-    return false;
+    return null;
   }
 
   const originalGetComputedStyle = window.getComputedStyle;
   const captureCopies: CaptureCopy[] = [];
 
   try {
-    // Intercept window.getComputedStyle to automatically sanitize any 'oklch' values.
-    // getComputedStyle contains modern color definitions in OKLCH form for Tailwind CSS v4 variables.
-    // The PDF renderer serializes computed styles, so converting these values to RGBA keeps brand colors stable.
     const sanitizeValue = (val: any) => {
       if (typeof val === 'string') {
         let clean = val;
@@ -223,166 +234,217 @@ export async function downloadIDCardPDF(
       }) as any;
     };
 
-    try {
-      const isLandscape = orientation === 'landscape';
-      const captureWidth = isLandscape ? 660 : 410;
-      const captureHeight = isLandscape ? 420 : 650;
-      const frontCapture = mountCaptureCopy(frontEl, captureWidth, captureHeight, 0);
-      const backCapture = mountCaptureCopy(backEl, captureWidth, captureHeight, captureHeight + 24);
-      captureCopies.push(frontCapture, backCapture);
+    const isLandscape = orientation === 'landscape';
+    const captureWidth = isLandscape ? 660 : 410;
+    const captureHeight = isLandscape ? 420 : 650;
+    const frontCapture = mountCaptureCopy(frontEl, captureWidth, captureHeight, 0);
+    const backCapture = mountCaptureCopy(backEl, captureWidth, captureHeight, captureHeight + 24);
+    captureCopies.push(frontCapture, backCapture);
 
-      const assetWaitMs = 1200;
-      if (document.fonts?.ready) {
-        await Promise.race([
-          document.fonts.ready,
-          new Promise<void>((resolve) => window.setTimeout(resolve, assetWaitMs))
-        ]);
-      }
-
-      const captureImages = [...frontCapture.element.querySelectorAll('img'), ...backCapture.element.querySelectorAll('img')];
-      await Promise.all(captureImages.map((image) => {
-        if (image.complete) return Promise.resolve();
-        return new Promise<void>((resolve) => {
-          const timeout = window.setTimeout(resolve, assetWaitMs);
-          const finish = () => {
-            window.clearTimeout(timeout);
-            resolve();
-          };
-          image.addEventListener('load', finish, { once: true });
-          image.addEventListener('error', finish, { once: true });
-        });
-      }));
-
-      const captureSize = { width: captureWidth, height: captureHeight };
-      const fontEmbedCSS = await Promise.race([
-        getFontEmbedCSS(frontCapture.element),
-        new Promise<string | undefined>((resolve) => window.setTimeout(() => resolve(undefined), assetWaitMs))
+    const assetWaitMs = 1200;
+    if (document.fonts?.ready) {
+      await Promise.race([
+        document.fonts.ready,
+        new Promise<void>((resolve) => window.setTimeout(resolve, assetWaitMs))
       ]);
-
-      const [imgFront, imgBack] = await Promise.all([
-        captureElementImage(frontCapture.element, captureSize, fontEmbedCSS),
-        captureElementImage(backCapture.element, captureSize, fontEmbedCSS)
-      ]);
-
-      const filename = `${studentName.trim().replace(/\s+/g, '_')}_ID_${idNumber.replace(/\s+/g, '_')}.pdf`;
-
-      if (mode === 'exact') {
-        const cardWidth = isLandscape ? 88 : 54;
-        const cardHeight = isLandscape ? 56 : 85.6;
-
-        const pdf = new jsPDF({
-          orientation: orientation,
-          unit: 'mm',
-          format: [cardWidth, cardHeight]
-        });
-
-        // Page 1: Front
-        pdf.addImage(imgFront, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-        
-        // Page 2: Back
-        pdf.addPage([cardWidth, cardHeight], orientation);
-        pdf.addImage(imgBack, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-
-        pdf.save(filename);
-      } else {
-        if (isLandscape) {
-          // Operator IDs print best as a paired sheet: front and back side-by-side at the same 88mm x 56mm size.
-          const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'mm',
-            format: 'a4'
-          });
-
-          const cardWidth = 88;
-          const cardHeight = 56;
-          const gap = 10;
-          const pageWidth = 297;
-          const pageHeight = 210;
-          const totalWidth = (cardWidth * 2) + gap;
-          const startX = (pageWidth - totalWidth) / 2;
-          const yOffset = (pageHeight - cardHeight) / 2;
-
-          pdf.addImage(imgFront, 'PNG', startX, yOffset, cardWidth, cardHeight, undefined, 'FAST');
-          pdf.addImage(imgBack, 'PNG', startX + cardWidth + gap, yOffset, cardWidth, cardHeight, undefined, 'FAST');
-
-          pdf.setDrawColor(205, 213, 224);
-          pdf.setLineWidth(0.15);
-          pdf.rect(startX - 0.5, yOffset - 0.5, cardWidth + 1, cardHeight + 1, 'S');
-          pdf.rect(startX + cardWidth + gap - 0.5, yOffset - 0.5, cardWidth + 1, cardHeight + 1, 'S');
-
-          pdf.save(filename);
-          return true;
-        }
-
-        // A4 printable layout centering Front & Back horizontally, stacked vertically
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4' // 210mm x 297mm
-        });
-
-        const cardWidth = isLandscape ? 88 : 54;
-        const cardHeight = isLandscape ? 56 : 85.6;
-        const xOffset = (210 - cardWidth) / 2;
-
-        // Title & Instruction headers
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(14);
-        pdf.setTextColor(12, 35, 64);
-        pdf.text('Jayalath Campus - ID Print Sheet', 105, 18, { align: 'center' });
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8.5);
-        pdf.setTextColor(100, 110, 120);
-        pdf.text('Use A4 card stock, print at 100% scale, and cut along the dashed guidelines.', 105, 24, { align: 'center' });
-
-        // -- FRONT CARD SECTION --
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        pdf.setTextColor(15, 23, 42);
-        pdf.text('FRONT SIDE', 105, 34, { align: 'center' });
-
-        // Subtle crop line guide container
-        pdf.setDrawColor(200, 200, 200);
-        pdf.setLineDashPattern([2, 2], 0);
-        pdf.rect(xOffset - 0.5, 37.5, cardWidth + 1, cardHeight + 1, 'S');
-
-        // Draw client front side
-        pdf.addImage(imgFront, 'PNG', xOffset, 38, cardWidth, cardHeight, undefined, 'FAST');
-
-        // -- BACK CARD SECTION --
-        const backYText = isLandscape ? 114 : 138;
-        const backYImage = isLandscape ? 118 : 142;
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        pdf.setTextColor(15, 23, 42);
-        pdf.text('REVERSE SIDE', 105, backYText, { align: 'center' });
-
-        // Subtle crop line guide container
-        pdf.rect(xOffset - 0.5, backYImage - 0.5, cardWidth + 1, cardHeight + 1, 'S');
-
-        // Draw client back side
-        pdf.addImage(imgBack, 'PNG', xOffset, backYImage, cardWidth, cardHeight, undefined, 'FAST');
-
-        // Footnote information
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(7.5);
-        pdf.setTextColor(130, 130, 130);
-        const generatedDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
-        pdf.text(`Generated via Operator ID Management Platform on ${generatedDate}`, 105, 260, { align: 'center' });
-        
-        pdf.save(filename);
-      }
-    } finally {
-      // Restore original getComputedStyle method
-      window.getComputedStyle = originalGetComputedStyle;
-      captureCopies.forEach(({ host }) => host.remove());
     }
 
+    const captureImages = [...frontCapture.element.querySelectorAll('img'), ...backCapture.element.querySelectorAll('img')];
+    await Promise.all(captureImages.map((image) => {
+      if (image.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(resolve, assetWaitMs);
+        const finish = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        image.addEventListener('load', finish, { once: true });
+        image.addEventListener('error', finish, { once: true });
+      });
+    }));
+
+    const captureSize = { width: captureWidth, height: captureHeight };
+    const fontEmbedCSS = await Promise.race([
+      getFontEmbedCSS(frontCapture.element),
+      new Promise<string | undefined>((resolve) => window.setTimeout(() => resolve(undefined), assetWaitMs))
+    ]);
+
+    const [front, back] = await Promise.all([
+      captureElementImage(frontCapture.element, captureSize, fontEmbedCSS),
+      captureElementImage(backCapture.element, captureSize, fontEmbedCSS)
+    ]);
+
+    return { front, back, width: captureWidth, height: captureHeight };
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+    captureCopies.forEach(({ host }) => host.remove());
+  }
+}
+
+/**
+ * Downloads high-fidelity ID card PDFs.
+ */
+export async function downloadIDCardPDF(
+  studentName: string,
+  idNumber: string,
+  frontElementId: string,
+  backElementId: string,
+  mode: 'exact' | 'a4_sheet' = 'exact',
+  orientation: 'portrait' | 'landscape' = 'portrait'
+): Promise<boolean> {
+  try {
+    const images = await captureCardImages(frontElementId, backElementId, orientation);
+    if (!images) return false;
+
+    const isLandscape = orientation === 'landscape';
+    const filename = safeFileName(studentName, idNumber, 'pdf');
+
+    if (mode === 'exact') {
+      const cardWidth = isLandscape ? 88 : 54;
+      const cardHeight = isLandscape ? 56 : 85.6;
+
+      const pdf = new jsPDF({
+        orientation: orientation,
+        unit: 'mm',
+        format: [cardWidth, cardHeight]
+      });
+
+      pdf.addImage(images.front, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+      pdf.addPage([cardWidth, cardHeight], orientation);
+      pdf.addImage(images.back, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+      pdf.save(filename);
+      return true;
+    }
+
+    if (isLandscape) {
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const cardWidth = 88;
+      const cardHeight = 56;
+      const gap = 10;
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const totalWidth = (cardWidth * 2) + gap;
+      const startX = (pageWidth - totalWidth) / 2;
+      const yOffset = (pageHeight - cardHeight) / 2;
+
+      pdf.addImage(images.front, 'PNG', startX, yOffset, cardWidth, cardHeight, undefined, 'FAST');
+      pdf.addImage(images.back, 'PNG', startX + cardWidth + gap, yOffset, cardWidth, cardHeight, undefined, 'FAST');
+
+      pdf.setDrawColor(205, 213, 224);
+      pdf.setLineWidth(0.15);
+      pdf.rect(startX - 0.5, yOffset - 0.5, cardWidth + 1, cardHeight + 1, 'S');
+      pdf.rect(startX + cardWidth + gap - 0.5, yOffset - 0.5, cardWidth + 1, cardHeight + 1, 'S');
+      pdf.save(filename);
+      return true;
+    }
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const cardWidth = 54;
+    const cardHeight = 85.6;
+    const xOffset = (210 - cardWidth) / 2;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(12, 35, 64);
+    pdf.text('Jayalath Campus - ID Print Sheet', 105, 18, { align: 'center' });
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(100, 110, 120);
+    pdf.text('Use A4 card stock, print at 100% scale, and cut along the dashed guidelines.', 105, 24, { align: 'center' });
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text('FRONT SIDE', 105, 34, { align: 'center' });
+
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineDashPattern([2, 2], 0);
+    pdf.rect(xOffset - 0.5, 37.5, cardWidth + 1, cardHeight + 1, 'S');
+    pdf.addImage(images.front, 'PNG', xOffset, 38, cardWidth, cardHeight, undefined, 'FAST');
+
+    const backYText = 138;
+    const backYImage = 142;
+    pdf.text('REVERSE SIDE', 105, backYText, { align: 'center' });
+    pdf.rect(xOffset - 0.5, backYImage - 0.5, cardWidth + 1, cardHeight + 1, 'S');
+    pdf.addImage(images.back, 'PNG', xOffset, backYImage, cardWidth, cardHeight, undefined, 'FAST');
+
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(130, 130, 130);
+    const generatedDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
+    pdf.text(`Generated via Operator ID Management Platform on ${generatedDate}`, 105, 260, { align: 'center' });
+
+    pdf.save(filename);
     return true;
   } catch (error) {
     console.error('Failed to generate card PDF:', error);
+    return false;
+  }
+}
+
+async function loadDataUrlImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+/**
+ * Downloads a high-resolution JPEG sheet using the exact captured card artwork.
+ */
+export async function downloadIDCardJPEG(
+  studentName: string,
+  idNumber: string,
+  frontElementId: string,
+  backElementId: string,
+  orientation: 'portrait' | 'landscape' = 'portrait'
+): Promise<boolean> {
+  try {
+    const images = await captureCardImages(frontElementId, backElementId, orientation);
+    if (!images) return false;
+
+    const frontImage = await loadDataUrlImage(images.front);
+    const backImage = await loadDataUrlImage(images.back);
+    const isLandscape = orientation === 'landscape';
+    const gap = isLandscape ? 24 : 36;
+    const padding = isLandscape ? 0 : 32;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+
+    canvas.width = Math.max(frontImage.naturalWidth, backImage.naturalWidth) + (padding * 2);
+    canvas.height = frontImage.naturalHeight + backImage.naturalHeight + gap + (padding * 2);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const frontX = Math.round((canvas.width - frontImage.naturalWidth) / 2);
+    const backX = Math.round((canvas.width - backImage.naturalWidth) / 2);
+    const frontY = padding;
+    const backY = padding + frontImage.naturalHeight + gap;
+
+    ctx.drawImage(frontImage, frontX, frontY);
+    ctx.drawImage(backImage, backX, backY);
+
+    downloadDataUrl(canvas.toDataURL('image/jpeg', 0.98), safeFileName(studentName, idNumber, 'jpg'));
+    return true;
+  } catch (error) {
+    console.error('Failed to generate card JPEG:', error);
     return false;
   }
 }
