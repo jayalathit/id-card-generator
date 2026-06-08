@@ -33,7 +33,11 @@ export const TEMPLATE_LAYERS: Record<TemplateSurface, BuiltinLayer[]> = {
     { id: 'front-watermark', name: 'Watermark' },
     { id: 'front-wave', name: 'Corner accent bars' },
     { id: 'front-header', name: 'Header and logo' },
-    { id: 'front-details', name: 'Operator details' },
+    { id: 'front-details', name: 'Operator details group' },
+    { id: 'front-title-card', name: 'Operator title card' },
+    { id: 'front-title-icon', name: 'Operator title icon' },
+    { id: 'front-title-text', name: 'Forklift / operator title' },
+    { id: 'front-info-rows', name: 'Operator data rows' },
     { id: 'front-photo', name: 'Photo and signature' },
     { id: 'front-verify', name: 'QR and validity' },
     { id: 'front-footer', name: 'Footer bar' }

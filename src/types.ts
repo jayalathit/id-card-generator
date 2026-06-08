@@ -42,6 +42,8 @@ export interface CanvasElement {
   hidden?: boolean;
   text?: string;
   fontSize?: number;
+  lineHeight?: number;
+  letterSpacing?: number;
   color?: string;
   fill?: string;
   borderColor?: string;

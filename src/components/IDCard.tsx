@@ -69,6 +69,11 @@ const DEFAULT_PRIMARY_CONTACT = '+94 70 250 3503';
 const DEFAULT_SECONDARY_CONTACT = '+94 11 750 3503';
 const DEFAULT_WEBSITE = 'jceti.com';
 const DEFAULT_EMAIL = 'info@jceti.com';
+const DESIGN_SNAP_STEP = 5;
+
+function snapDesignValue(value: number): number {
+  return Math.round(value / DESIGN_SNAP_STEP) * DESIGN_SNAP_STEP;
+}
 
 function formatSriLankanPhone(value: string | undefined, fallback: string): string {
   const trimmed = value?.trim();
@@ -157,8 +162,8 @@ export const IDCard: React.FC<IDCardProps> = ({
     const drag = dragRef.current;
     if (!designMode || !drag || drag.pointerId !== event.pointerId) return;
     onChangeLayer?.(surface, drag.id, {
-      x: Math.round(drag.x + event.clientX - drag.startX),
-      y: Math.round(drag.y + event.clientY - drag.startY)
+      x: snapDesignValue(drag.x + event.clientX - drag.startX),
+      y: snapDesignValue(drag.y + event.clientY - drag.startY)
     });
   };
 
@@ -189,6 +194,24 @@ export const IDCard: React.FC<IDCardProps> = ({
     };
   };
 
+  const selectedClass = (id: string) => (
+    designMode && selectedSurface === surface && selectedLayerId === id ? 'design-layer-active' : ''
+  );
+
+  const typographyStyle = (
+    id: string,
+    defaults: { fontSize?: number; lineHeight?: number; letterSpacing?: number } = {}
+  ): CSSProperties => {
+    const element = layerValue(id);
+    return {
+      fontSize: element.fontSize ? `${element.fontSize}px` : undefined,
+      lineHeight: element.lineHeight || defaults.lineHeight,
+      letterSpacing: typeof element.letterSpacing === 'number' ? `${element.letterSpacing}px` : undefined
+    };
+  };
+
+  const cardDesignModeClass = designMode ? ' design-grid-active' : '';
+
   const customLayers = () => layoutElements
     .filter((element) => element.surface === surface && element.kind !== 'builtin')
     .map((element) => {
@@ -204,7 +227,8 @@ export const IDCard: React.FC<IDCardProps> = ({
         borderRadius: 0,
         fontSize: element.fontSize || 16,
         fontWeight: 700,
-        lineHeight: 1.1,
+        lineHeight: element.lineHeight || 1.1,
+        letterSpacing: typeof element.letterSpacing === 'number' ? element.letterSpacing : undefined,
         textAlign: 'center',
         display: 'flex',
         alignItems: 'center',
@@ -362,7 +386,7 @@ export const IDCard: React.FC<IDCardProps> = ({
       return (
         <div 
           id={`card-back-${student.id}`}
-          className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+          className={`id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
           style={cardStyle('660px', '420px')}
         >
           {/* Watermark in background */}
@@ -559,7 +583,7 @@ export const IDCard: React.FC<IDCardProps> = ({
       return (
         <div 
           id={`card-front-${student.id}`}
-          className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+          className={`id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
           style={cardStyle('660px', '420px')}
         >
           {/* Watermark in background */}
@@ -604,9 +628,15 @@ export const IDCard: React.FC<IDCardProps> = ({
             {/* Left side parameters list */}
             <div className="col-span-8 flex flex-col gap-2" {...editorProps('front-details')}>
               {/* Title zone: Machine logo box + Heavy operator title labels */}
-              <div className="flex items-center text-left w-[300px] h-[46px] bg-white border border-slate-200 shadow-sm">
+              <div
+                className={`flex items-center text-left w-[300px] h-[46px] bg-white border border-slate-200 shadow-sm ${selectedClass('front-title-card')}`}
+                {...editorProps('front-title-card')}
+              >
                 {/* Visual indicator card */}
-                <div className="w-[48px] h-full bg-slate-50 border-r-[3px] border-[#e2a812] flex-shrink-0 flex items-center justify-center text-[#0c2340]">
+                <div
+                  className={`w-[48px] h-full bg-slate-50 border-r-[3px] border-[#e2a812] flex-shrink-0 flex items-center justify-center text-[#0c2340] ${selectedClass('front-title-icon')}`}
+                  {...editorProps('front-title-icon')}
+                >
                   {equipment_type === 'forklift' ? (
                     <svg width="28" height="28" viewBox="0 0 100 100" fill="currentColor" className="w-7 h-7">
                       <path d="M12 65 h40 l10 -15 h15 v12 h-10 v15 h-55 z" />
@@ -629,34 +659,61 @@ export const IDCard: React.FC<IDCardProps> = ({
                   )}
                 </div>
                 
-                <div className="flex flex-col justify-center leading-none pl-4 pr-3 flex-1">
-                  <span className="font-sans font-black text-[19px] text-[#0c2340] tracking-tight uppercase leading-none">
+                <div
+                  className={`flex flex-col justify-center leading-none pl-4 pr-3 flex-1 ${selectedClass('front-title-text')}`}
+                  {...editorProps('front-title-text')}
+                >
+                  <span
+                    className="font-sans font-black text-[20px] text-[#0c2340] tracking-tight uppercase leading-none"
+                    style={typographyStyle('front-title-text', { lineHeight: 0.92, letterSpacing: -0.3 })}
+                  >
                     {equipment_type === 'forklift' ? 'FORKLIFT' : 'BACKHOE LOADER'}
                   </span>
-                  <span className="font-sans font-black text-[16px] text-[#e2a812] tracking-[0.08em] uppercase mt-[3px] leading-none">
+                  <span
+                    className="font-sans font-black text-[17px] text-[#e2a812] tracking-[0.08em] uppercase mt-[2px] leading-none"
+                    style={typographyStyle('front-title-text', { lineHeight: 0.92, letterSpacing: 0.7 })}
+                  >
                     OPERATOR ID
                   </span>
                 </div>
               </div>
 
               {/* Rows Details columns list with colons - perfectly aligned */}
-              <div className="flex flex-col gap-[1px] w-full max-w-[380px]">
+              <div
+                className={`flex flex-col gap-[2px] w-full max-w-[390px] ${selectedClass('front-info-rows')}`}
+                {...editorProps('front-info-rows')}
+                style={{
+                  ...editorProps('front-info-rows').style,
+                  rowGap: `${Math.max(0, (layerValue('front-info-rows').lineHeight ?? 1.2) * 1.7)}px`
+                }}
+              >
                 {infoRows.map((row, idx) => {
                   const IconComp = row.icon;
                   return (
-                    <div key={idx} className="flex items-center gap-1.5 pb-[1px] leading-none min-h-[18px]">
+                    <div key={idx} className="flex items-center gap-1.5 pb-[1px] leading-none min-h-[19px]">
                       {/* Round icon label button wrapper */}
                       <div className="w-[17px] h-[17px] bg-[#0c2340] rounded flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-800">
                         <IconComp size={8.5} className="stroke-[3]" />
                       </div>
                       {/* Wide fixed label column preventing line wrap */}
-                      <span className="w-[96px] text-[7.8px] font-bold text-slate-500 uppercase tracking-[0.16em] block text-left shrink-0">
+                      <span
+                        className="w-[104px] text-[8.4px] font-bold text-slate-500 uppercase tracking-[0.14em] block text-left shrink-0"
+                        style={typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 1.1 })}
+                      >
                         {row.label}
                       </span>
                       {/* Aligned colons column */}
-                      <span className="text-[9.2px] font-black text-[#0c2340] block w-[9px] shrink-0 text-center pr-1">:</span>
+                      <span
+                        className="text-[9.8px] font-black text-[#0c2340] block w-[10px] shrink-0 text-center pr-1"
+                        style={typographyStyle('front-info-rows', { lineHeight: 1 })}
+                      >
+                        :
+                      </span>
                       {/* Uppercase formatted bold values for elite card design */}
-                      <span className="flex-1 text-[9.2px] font-black text-[#0c2340] uppercase whitespace-nowrap leading-none mt-[1px] text-left select-all tracking-[0.015em] font-sans">
+                      <span
+                        className="flex-1 text-[9.8px] font-black text-[#0c2340] uppercase whitespace-nowrap leading-none mt-[1px] text-left select-all tracking-[0.015em] font-sans"
+                        style={typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 0.15 })}
+                      >
                         {String(row.value).toUpperCase()}
                       </span>
                     </div>
@@ -734,7 +791,7 @@ export const IDCard: React.FC<IDCardProps> = ({
     return (
       <div 
         id={`card-back-${student.id}`}
-        className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+        className={`id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
         style={cardStyle('410px', '650px')}
       >
         {/* Punch Card Slot Punch representation on top */}
@@ -928,7 +985,7 @@ export const IDCard: React.FC<IDCardProps> = ({
   return (
     <div 
       id={`card-front-${student.id}`}
-      className="id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-0 select-none print:m-0 print:border-0 print:shadow-none shadow-xl"
+      className={`id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-0 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
       style={cardStyle('410px', '650px')}
     >
       {/* Absolute top punch card slot representation */}

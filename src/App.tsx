@@ -1512,6 +1512,46 @@ export default function App() {
                       />
                     )}
 
+                    {(activeCanvasLayer.kind === 'text' || activeCanvasLayer.kind === 'builtin') && (
+                      <div className="grid grid-cols-3 gap-2 text-[9px] font-bold text-natural-muted uppercase rounded-md border border-natural-border bg-natural-panel/70 p-2">
+                        <label>Font
+                          <input
+                            type="number"
+                            min="4"
+                            step="0.5"
+                            value={activeCanvasLayer.fontSize || ''}
+                            placeholder="Auto"
+                            onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { fontSize: e.target.value ? Number(e.target.value) : undefined })}
+                            className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext"
+                          />
+                        </label>
+                        <label>Line gap
+                          <input
+                            type="number"
+                            min="0.7"
+                            step="0.1"
+                            value={activeCanvasLayer.lineHeight || ''}
+                            placeholder="Auto"
+                            onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { lineHeight: e.target.value ? Number(e.target.value) : undefined })}
+                            className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext"
+                          />
+                        </label>
+                        <label>Letter
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={activeCanvasLayer.letterSpacing ?? ''}
+                            placeholder="Auto"
+                            onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { letterSpacing: e.target.value ? Number(e.target.value) : undefined })}
+                            className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext"
+                          />
+                        </label>
+                        <span className="col-span-3 text-[8.5px] normal-case tracking-normal text-natural-muted font-semibold">
+                          Grid is visible on the card while editing. Dragging snaps to 5px for clean spacing.
+                        </span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-3 gap-2 text-[9px] font-bold text-natural-muted uppercase">
                       <label>X
                         <input type="number" value={activeCanvasLayer.x} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { x: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
