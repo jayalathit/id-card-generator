@@ -285,6 +285,35 @@ export async function downloadIDCardPDF(
 
         pdf.save(filename);
       } else {
+        if (isLandscape) {
+          // Operator IDs print best as a paired sheet: front and back side-by-side at the same 88mm x 56mm size.
+          const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const cardWidth = 88;
+          const cardHeight = 56;
+          const gap = 10;
+          const pageWidth = 297;
+          const pageHeight = 210;
+          const totalWidth = (cardWidth * 2) + gap;
+          const startX = (pageWidth - totalWidth) / 2;
+          const yOffset = (pageHeight - cardHeight) / 2;
+
+          pdf.addImage(imgFront, 'PNG', startX, yOffset, cardWidth, cardHeight, undefined, 'FAST');
+          pdf.addImage(imgBack, 'PNG', startX + cardWidth + gap, yOffset, cardWidth, cardHeight, undefined, 'FAST');
+
+          pdf.setDrawColor(205, 213, 224);
+          pdf.setLineWidth(0.15);
+          pdf.rect(startX - 0.5, yOffset - 0.5, cardWidth + 1, cardHeight + 1, 'S');
+          pdf.rect(startX + cardWidth + gap - 0.5, yOffset - 0.5, cardWidth + 1, cardHeight + 1, 'S');
+
+          pdf.save(filename);
+          return true;
+        }
+
         // A4 printable layout centering Front & Back horizontally, stacked vertically
         const pdf = new jsPDF({
           orientation: 'portrait',
