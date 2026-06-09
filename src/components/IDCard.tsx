@@ -204,9 +204,19 @@ export const IDCard: React.FC<IDCardProps> = ({
   ): CSSProperties => {
     const element = layerValue(id);
     return {
-      fontSize: element.fontSize ? `${element.fontSize}px` : undefined,
+      fontSize: element.fontSize ? `${element.fontSize}px` : (defaults.fontSize ? `${defaults.fontSize}px` : undefined),
       lineHeight: element.lineHeight || defaults.lineHeight,
-      letterSpacing: typeof element.letterSpacing === 'number' ? `${element.letterSpacing}px` : undefined
+      letterSpacing: typeof element.letterSpacing === 'number'
+        ? `${element.letterSpacing}px`
+        : (typeof defaults.letterSpacing === 'number' ? `${defaults.letterSpacing}px` : undefined)
+    };
+  };
+
+  const layerBoxStyle = (id: string, defaults: { width?: number; height?: number } = {}): CSSProperties => {
+    const element = layerValue(id);
+    return {
+      width: element.width ? `${element.width}px` : (defaults.width ? `${defaults.width}px` : undefined),
+      height: element.height ? `${element.height}px` : (defaults.height ? `${defaults.height}px` : undefined)
     };
   };
 
@@ -601,19 +611,53 @@ export const IDCard: React.FC<IDCardProps> = ({
           <div className="relative z-10 flex items-center justify-between" {...editorProps('front-header')}>
             {/* Header left: balanced Jayalath Campus brand lockup */}
             <div className="flex items-center justify-center min-w-[310px]">
-              <OperatorJayalathBrand
-                logoSize={48}
-                wordmarkWidth={190}
-                wordmarkHeight={38}
-                taglineSize={6.8}
-              />
+              <div className="inline-flex items-center justify-center select-none">
+                <div
+                  className={`flex items-center justify-center overflow-hidden shrink-0 mr-2.5 ${selectedClass('front-brand-logo')}`}
+                  {...editorProps('front-brand-logo')}
+                  style={{
+                    ...editorProps('front-brand-logo').style,
+                    ...layerBoxStyle('front-brand-logo', { width: 48, height: 48 })
+                  }}
+                >
+                  <BrandLogo size={layerValue('front-brand-logo').width || 48} />
+                </div>
+                <div className="flex flex-col items-center justify-center leading-none">
+                  <img
+                    src={jayalathWordmarkUrl}
+                    alt="JAYALATH"
+                    className={`object-contain object-center ${selectedClass('front-brand-wordmark')}`}
+                    {...editorProps('front-brand-wordmark')}
+                    style={{
+                      ...editorProps('front-brand-wordmark').style,
+                      ...layerBoxStyle('front-brand-wordmark', { width: 190, height: 38 })
+                    }}
+                    draggable={false}
+                  />
+                  <span
+                    className={`text-[#e2a812] font-sans font-black uppercase tracking-[0.035em] leading-[0.92] text-center block mt-[1px] ${selectedClass('front-brand-tagline')}`}
+                    {...editorProps('front-brand-tagline')}
+                    style={{
+                      ...editorProps('front-brand-tagline').style,
+                      ...layerBoxStyle('front-brand-tagline', { width: 190 }),
+                      ...typographyStyle('front-brand-tagline', { fontSize: 6.8, lineHeight: 0.92, letterSpacing: 0.2 })
+                    }}
+                  >
+                    <span className="block">CAMPUS FOR CAREER EDUCATION</span>
+                    <span className="block">&amp; TRAINING INSTITUTE</span>
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Subdued Vertical Divider line */}
             <div className="w-[1px] h-8 bg-slate-200" />
 
             {/* Header right: INSTITUTION branding */}
-            <div className="flex flex-col text-center pr-3 min-w-[120px]">
+            <div
+              className={`flex flex-col text-center pr-3 min-w-[120px] ${selectedClass('front-official-title')}`}
+              {...editorProps('front-official-title')}
+            >
               <span className="font-sans font-black text-[16px] tracking-tight text-[#0c2340] leading-none uppercase">
                 {templateDetails.rightMainHeader || "OFFICIAL ID"}
               </span>

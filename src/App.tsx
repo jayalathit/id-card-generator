@@ -1552,6 +1552,34 @@ export default function App() {
                       </div>
                     )}
 
+                    {activeCanvasLayer.kind === 'builtin' && (
+                      <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-natural-muted uppercase rounded-md border border-natural-border bg-white p-2">
+                        <label>Width
+                          <input
+                            type="number"
+                            min="1"
+                            value={activeCanvasLayer.width || ''}
+                            placeholder="Auto"
+                            onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { width: e.target.value ? Number(e.target.value) : undefined })}
+                            className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext"
+                          />
+                        </label>
+                        <label>Height
+                          <input
+                            type="number"
+                            min="1"
+                            value={activeCanvasLayer.height || ''}
+                            placeholder="Auto"
+                            onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { height: e.target.value ? Number(e.target.value) : undefined })}
+                            className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext"
+                          />
+                        </label>
+                        <span className="col-span-2 text-[8.5px] normal-case tracking-normal text-natural-muted font-semibold">
+                          Use Width to stretch text areas like a Canva text box. Use Font to grow the letters.
+                        </span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-3 gap-2 text-[9px] font-bold text-natural-muted uppercase">
                       <label>X
                         <input type="number" value={activeCanvasLayer.x} onChange={(e) => handleChangeCanvasLayer(editingSurface, activeCanvasLayer.id, { x: Number(e.target.value) })} className="mt-1 w-full rounded border border-natural-darkborder px-1.5 py-1 text-natural-darktext" />
