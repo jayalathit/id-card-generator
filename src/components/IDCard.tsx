@@ -714,10 +714,11 @@ export const IDCard: React.FC<IDCardProps> = ({
 
               {/* Rows Details columns list with colons - perfectly aligned */}
               <div
-                className={`flex flex-col gap-[2px] w-full max-w-[390px] ${selectedClass('front-info-rows')}`}
+                className={`flex flex-col gap-[2px] max-w-none ${selectedClass('front-info-rows')}`}
                 {...editorProps('front-info-rows')}
                 style={{
                   ...editorProps('front-info-rows').style,
+                  ...layerBoxStyle('front-info-rows', { width: 430 }),
                   rowGap: `${Math.max(0, (layerValue('front-info-rows').lineHeight ?? 1.2) * 1.7)}px`
                 }}
               >
@@ -731,7 +732,7 @@ export const IDCard: React.FC<IDCardProps> = ({
                       </div>
                       {/* Wide fixed label column preventing line wrap */}
                       <span
-                        className="w-[104px] text-[8.4px] font-bold text-slate-500 uppercase tracking-[0.14em] block text-left shrink-0"
+                        className="w-[128px] text-[8.4px] font-bold text-slate-500 uppercase tracking-[0.14em] block text-left shrink-0 whitespace-nowrap"
                         style={typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 1.1 })}
                       >
                         {row.label}
