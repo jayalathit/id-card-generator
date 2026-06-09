@@ -370,7 +370,7 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Top Row Header area */}
-          <div className="relative z-10 flex items-center justify-between mt-[2px] mb-2" {...editorProps('back-header')}>
+          <div className="relative z-10 flex items-start justify-between h-[54px] mt-[2px] mb-0 overflow-visible" {...editorProps('back-header')}>
             {/* Header left: OPERATOR ID with line */}
             <div className={`flex flex-col text-left w-[170px] shrink-0 ${selectedClass('back-operator-title')}`} {...editorProps('back-operator-title')}>
               <span className="font-sans font-black text-[22px] text-[#0c2340] tracking-tight uppercase leading-none whitespace-nowrap block">
@@ -383,7 +383,7 @@ export const IDCard: React.FC<IDCardProps> = ({
             </div>
 
             {/* Header right: Institution brand model logo */}
-            <div className="flex items-center justify-center pr-1 shrink-0">
+            <div className="flex items-start justify-center pr-1 shrink-0 overflow-visible">
               <div className="inline-flex items-center justify-center select-none">
                 <div
                   className={`flex items-center justify-center overflow-hidden shrink-0 mr-2 ${selectedClass('back-brand-logo')}`}
@@ -425,7 +425,7 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Central content splitting columns */}
-          <div className="relative z-10 grid grid-cols-12 gap-4 items-start mt-[10px] px-1">
+          <div className="relative z-10 grid grid-cols-12 gap-4 items-start mt-[2px] px-1 mb-[94px]">
             {/* Left side details */}
             <div className="col-span-7 flex flex-col gap-2" {...editorProps('back-statement')}>
               <div className="grid grid-cols-[28px_1fr] gap-3 border-l-[3px] border-[#0c2340] bg-slate-50/80 px-3 py-2 min-h-[58px]">
@@ -522,10 +522,10 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Footer Contacts Row */}
-          <div className="relative z-10 grid grid-cols-3 gap-0 border-t border-gray-200 mt-auto mb-[18px]" {...editorProps('back-contact')}>
+          <div className="absolute left-5 right-5 bottom-[22px] z-10 grid grid-cols-3 gap-0 border-t border-gray-200 h-[76px] bg-white/95" {...editorProps('back-contact')}>
             {/* Column 1 Address */}
-            <div className="grid grid-cols-[14px_1fr] gap-2 pt-[10px] pr-3">
-              <div className="w-[14px] h-[14px] flex items-start justify-center pt-[1px]">
+            <div className="grid grid-cols-[14px_1fr] gap-2 pt-[12px] pr-3">
+              <div className="w-[14px] h-[14px] flex items-center justify-center pt-[1px]">
                 <MapPin size={12} className="text-[#e2a812] flex-shrink-0" />
               </div>
               <div className="text-left min-w-0">
@@ -534,8 +534,8 @@ export const IDCard: React.FC<IDCardProps> = ({
               </div>
             </div>
             {/* Column 2 Contact */}
-            <div className="grid grid-cols-[14px_1fr] gap-2 border-x border-gray-200 pt-[10px] px-3">
-              <div className="w-[14px] h-[14px] flex items-start justify-center pt-[1px]">
+            <div className="grid grid-cols-[14px_1fr] gap-2 border-x border-gray-200 pt-[12px] px-3">
+              <div className="w-[14px] h-[14px] flex items-center justify-center pt-[1px]">
                 <Phone size={12} className="text-[#e2a812] flex-shrink-0" />
               </div>
               <div className="text-left min-w-0">
@@ -544,8 +544,8 @@ export const IDCard: React.FC<IDCardProps> = ({
               </div>
             </div>
             {/* Column 3 Website and email */}
-            <div className="grid grid-cols-[14px_1fr] gap-2 pt-[10px] pl-3">
-              <div className="w-[14px] h-[14px] flex items-start justify-center pt-[1px]">
+            <div className="grid grid-cols-[14px_1fr] gap-2 pt-[12px] pl-3">
+              <div className="w-[14px] h-[14px] flex items-center justify-center pt-[1px]">
                 <Mail size={12} className="text-[#e2a812] flex-shrink-0" />
               </div>
               <div className="text-left min-w-0">
