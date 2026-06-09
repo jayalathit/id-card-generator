@@ -322,47 +322,6 @@ export const IDCard: React.FC<IDCardProps> = ({
     )
   );
 
-  const OperatorJayalathBrand = ({
-    logoSize = 42,
-    wordmarkWidth = 155,
-    wordmarkHeight = 25,
-    taglineSize = 5.8,
-    showLogo = true
-  }: {
-    logoSize?: number;
-    wordmarkWidth?: number;
-    wordmarkHeight?: number;
-    taglineSize?: number;
-    showLogo?: boolean;
-  }) => (
-    <div className="inline-flex items-center justify-center select-none">
-      {showLogo && (
-        <div
-          className="flex items-center justify-center overflow-hidden shrink-0 mr-2.5"
-          style={{ width: logoSize, height: logoSize }}
-        >
-          <BrandLogo size={logoSize} />
-        </div>
-      )}
-      <div className="flex flex-col items-center justify-center leading-none">
-        <img
-          src={jayalathWordmarkUrl}
-          alt="JAYALATH"
-          className="object-contain object-center"
-          style={{ width: wordmarkWidth, height: wordmarkHeight }}
-          draggable={false}
-        />
-        <span
-          className="text-[#e2a812] font-sans font-black uppercase tracking-[0.035em] leading-[0.92] text-center block mt-[1px]"
-          style={{ width: wordmarkWidth, fontSize: taglineSize }}
-        >
-          <span className="block">CAMPUS FOR CAREER EDUCATION</span>
-          <span className="block">&amp; TRAINING INSTITUTE</span>
-        </span>
-      </div>
-    </div>
-  );
-
   // High-fidelity graphic watermarks of Forklift or Backhoe Loader
   const ForkliftWatermark = () => (
     <svg width="180" height="180" viewBox="0 0 100 100" fill="currentColor" className="w-[180px] h-[180px] text-[#0c2340] opacity-[0.03] select-none pointer-events-none">
@@ -413,7 +372,7 @@ export const IDCard: React.FC<IDCardProps> = ({
           {/* Top Row Header area */}
           <div className="relative z-10 flex items-center justify-between mt-[2px] mb-2" {...editorProps('back-header')}>
             {/* Header left: OPERATOR ID with line */}
-            <div className="flex flex-col text-left w-[170px] shrink-0">
+            <div className={`flex flex-col text-left w-[170px] shrink-0 ${selectedClass('back-operator-title')}`} {...editorProps('back-operator-title')}>
               <span className="font-sans font-black text-[22px] text-[#0c2340] tracking-tight uppercase leading-none whitespace-nowrap block">
                 OPERATOR ID
               </span>
@@ -425,12 +384,43 @@ export const IDCard: React.FC<IDCardProps> = ({
 
             {/* Header right: Institution brand model logo */}
             <div className="flex items-center justify-center pr-1 shrink-0">
-              <OperatorJayalathBrand
-                logoSize={38}
-                wordmarkWidth={112}
-                wordmarkHeight={26}
-                taglineSize={5.2}
-              />
+              <div className="inline-flex items-center justify-center select-none">
+                <div
+                  className={`flex items-center justify-center overflow-hidden shrink-0 mr-2 ${selectedClass('back-brand-logo')}`}
+                  {...editorProps('back-brand-logo')}
+                  style={{
+                    ...editorProps('back-brand-logo').style,
+                    ...layerBoxStyle('back-brand-logo', { width: 38, height: 38 })
+                  }}
+                >
+                  <BrandLogo size={layerValue('back-brand-logo').width || 38} />
+                </div>
+                <div className="flex flex-col items-center justify-center leading-none">
+                  <img
+                    src={jayalathWordmarkUrl}
+                    alt="JAYALATH"
+                    className={`object-contain object-center ${selectedClass('back-brand-wordmark')}`}
+                    {...editorProps('back-brand-wordmark')}
+                    style={{
+                      ...editorProps('back-brand-wordmark').style,
+                      ...layerBoxStyle('back-brand-wordmark', { width: 112, height: 26 })
+                    }}
+                    draggable={false}
+                  />
+                  <span
+                    className={`text-[#e2a812] font-sans font-black uppercase tracking-[0.035em] leading-[0.92] text-center block mt-[1px] ${selectedClass('back-brand-tagline')}`}
+                    {...editorProps('back-brand-tagline')}
+                    style={{
+                      ...editorProps('back-brand-tagline').style,
+                      ...layerBoxStyle('back-brand-tagline', { width: 112 }),
+                      ...typographyStyle('back-brand-tagline', { fontSize: 6.2, lineHeight: 0.92, letterSpacing: 0.2 })
+                    }}
+                  >
+                    <span className="block">CAMPUS FOR CAREER EDUCATION</span>
+                    <span className="block">&amp; TRAINING INSTITUTE</span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
