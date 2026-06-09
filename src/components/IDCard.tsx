@@ -408,16 +408,16 @@ export const IDCard: React.FC<IDCardProps> = ({
                     draggable={false}
                   />
                   <span
-                    className={`text-[#e2a812] font-sans font-black uppercase tracking-[0.035em] leading-[0.92] text-center block mt-[1px] ${selectedClass('back-brand-tagline')}`}
+                    className={`text-[#e2a812] font-sans font-black uppercase tracking-[0.025em] leading-[0.82] text-center block mt-[1px] ${selectedClass('back-brand-tagline')}`}
                     {...editorProps('back-brand-tagline')}
                     style={{
                       ...editorProps('back-brand-tagline').style,
-                      ...layerBoxStyle('back-brand-tagline', { width: 112 }),
-                      ...typographyStyle('back-brand-tagline', { fontSize: 6.2, lineHeight: 0.92, letterSpacing: 0.2 })
+                      ...layerBoxStyle('back-brand-tagline', { width: 146 }),
+                      ...typographyStyle('back-brand-tagline', { fontSize: 7, lineHeight: 0.82, letterSpacing: 0.1 })
                     }}
                   >
-                    <span className="block">CAMPUS FOR CAREER EDUCATION</span>
-                    <span className="block">&amp; TRAINING INSTITUTE</span>
+                    <span className="block whitespace-nowrap">CAMPUS FOR CAREER EDUCATION</span>
+                    <span className="block whitespace-nowrap">&amp; TRAINING INSTITUTE</span>
                   </span>
                 </div>
               </div>
