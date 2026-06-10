@@ -591,8 +591,8 @@ export const IDCard: React.FC<IDCardProps> = ({
             {equipment_type === 'forklift' ? <ForkliftWatermark /> : <BackhoeWatermark />}
           </div>
 
-          {/* Precision top accent rails */}
-          <div className="absolute top-0 left-0 right-0 h-[10px] pointer-events-none overflow-hidden z-0" {...editorProps('front-wave')}>
+          {/* Precision corner accent rails */}
+          <div className="absolute top-0 right-[-24px] w-[264px] h-[10px] pointer-events-none overflow-hidden z-0" {...editorProps('front-wave')}>
             <div className="absolute top-0 inset-x-0 h-[7px] bg-[#0c2340]" />
             <div className="absolute top-[7px] inset-x-0 h-[3px] bg-[#e2a812]" />
           </div>
