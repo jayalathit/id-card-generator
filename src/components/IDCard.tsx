@@ -793,24 +793,62 @@ export const IDCard: React.FC<IDCardProps> = ({
 
           {/* Compact verification line; full QR verification is provided on the reverse side. */}
           <div className="absolute left-5 right-5 bottom-9 z-10 h-[28px] flex items-center justify-between border-t border-slate-100 pt-1.5" {...editorProps('front-verify')}>
-            <span className="w-[230px] text-[7.1px] font-black uppercase tracking-[0.12em] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis">
+            <span
+              className={`w-[230px] text-[7.1px] font-black uppercase tracking-[0.12em] text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis ${selectedClass('front-issued-by')}`}
+              {...editorProps('front-issued-by')}
+              style={{
+                ...editorProps('front-issued-by').style,
+                ...layerBoxStyle('front-issued-by', { width: 230 }),
+                ...typographyStyle('front-issued-by', { fontSize: 7.1, lineHeight: 1, letterSpacing: 0.85 })
+              }}
+            >
               Issued by Jayalath Campus
             </span>
-            <span className="w-[245px] text-right text-[7.1px] font-black uppercase tracking-[0.075em] text-[#0c2340] whitespace-nowrap overflow-hidden text-ellipsis">
+            <span
+              className={`w-[245px] text-right text-[7.1px] font-black uppercase tracking-[0.075em] text-[#0c2340] whitespace-nowrap overflow-hidden text-ellipsis ${selectedClass('front-verify-text')}`}
+              {...editorProps('front-verify-text')}
+              style={{
+                ...editorProps('front-verify-text').style,
+                ...layerBoxStyle('front-verify-text', { width: 245 }),
+                ...typographyStyle('front-verify-text', { fontSize: 7.1, lineHeight: 1, letterSpacing: 0.55 })
+              }}
+            >
               Verify: {templateDetails.backVerificationUrl}
             </span>
           </div>
 
           {/* Solid footer with squared gold terminals */}
           <div className="absolute bottom-0 left-0 right-0 h-9 bg-[#0c2340] border-t-[3px] border-[#e2a812] pointer-events-none select-none overflow-hidden flex items-center justify-between px-6 z-10" {...editorProps('front-footer')}>
-            <div className="absolute left-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
+            <div
+              className={`absolute left-0 bottom-0 top-0 w-2 bg-[#e2a812] ${selectedClass('front-footer-left-cap')}`}
+              {...editorProps('front-footer-left-cap')}
+              style={{
+                ...editorProps('front-footer-left-cap').style,
+                ...layerBoxStyle('front-footer-left-cap', { width: 8 })
+              }}
+            />
             
             {/* Centered slogans with high spacing */}
-            <span className="text-[9.6px] font-sans font-black tracking-[0.135em] text-white uppercase z-10 mx-auto block leading-none">
+            <span
+              className={`text-[9.6px] font-sans font-black tracking-[0.135em] text-white uppercase z-10 mx-auto block leading-none ${selectedClass('front-footer-slogan')}`}
+              {...editorProps('front-footer-slogan')}
+              style={{
+                ...editorProps('front-footer-slogan').style,
+                ...layerBoxStyle('front-footer-slogan', { width: 430 }),
+                ...typographyStyle('front-footer-slogan', { fontSize: 9.6, lineHeight: 1, letterSpacing: 1.3 })
+              }}
+            >
               SAFE HANDS  •  SKILLED MINDS  •  STRONGER FUTURE
             </span>
 
-            <div className="absolute right-0 bottom-0 top-0 w-2 bg-[#e2a812]" />
+            <div
+              className={`absolute right-0 bottom-0 top-0 w-2 bg-[#e2a812] ${selectedClass('front-footer-right-cap')}`}
+              {...editorProps('front-footer-right-cap')}
+              style={{
+                ...editorProps('front-footer-right-cap').style,
+                ...layerBoxStyle('front-footer-right-cap', { width: 8 })
+              }}
+            />
           </div>
           {customLayers()}
         </div>

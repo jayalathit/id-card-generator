@@ -44,7 +44,12 @@ export const TEMPLATE_LAYERS: Record<TemplateSurface, BuiltinLayer[]> = {
     { id: 'front-info-rows', name: 'Operator data rows' },
     { id: 'front-photo', name: 'Photo and signature' },
     { id: 'front-verify', name: 'QR and validity' },
-    { id: 'front-footer', name: 'Footer bar' }
+    { id: 'front-issued-by', name: 'Issued by text' },
+    { id: 'front-verify-text', name: 'Verify website text' },
+    { id: 'front-footer', name: 'Footer bar' },
+    { id: 'front-footer-left-cap', name: 'Footer left gold bar' },
+    { id: 'front-footer-slogan', name: 'Footer slogan' },
+    { id: 'front-footer-right-cap', name: 'Footer right gold bar' }
   ],
   'operator-back': [
     { id: 'back-watermark', name: 'Watermark' },
