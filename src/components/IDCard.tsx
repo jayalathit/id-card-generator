@@ -579,6 +579,17 @@ export const IDCard: React.FC<IDCardProps> = ({
         { label: 'ISSUE DATE', value: student.issueDate || '26/05/2026', icon: Calendar },
         { label: 'TRAINING CENTER', value: student.trainingCenter || 'JAYALATH CAMPUS', icon: Briefcase }
       ];
+      const infoRowsLayer = layerValue('front-info-rows');
+      const infoRowsBaseFont = infoRowsLayer.fontSize || 9.8;
+      const infoRowsScale = infoRowsBaseFont / 9.8;
+      const infoRowsLabelFont = 8.4 * infoRowsScale;
+      const infoRowsValueFont = 9.8 * infoRowsScale;
+      const infoRowsIconBoxSize = 17 * infoRowsScale;
+      const infoRowsIconGlyphSize = 8.5 * infoRowsScale;
+      const infoRowsMinHeight = 19 * infoRowsScale;
+      const infoRowsLabelWidth = 128 * Math.max(1, infoRowsScale * 0.92);
+      const infoRowsColonWidth = 10 * Math.max(1, infoRowsScale * 0.8);
+      const infoRowsGap = Math.max(0, (infoRowsLayer.lineHeight ?? 1.2) * 1.7 * infoRowsScale);
 
       return (
         <div 
@@ -719,35 +730,53 @@ export const IDCard: React.FC<IDCardProps> = ({
                 style={{
                   ...editorProps('front-info-rows').style,
                   ...layerBoxStyle('front-info-rows', { width: 430 }),
-                  rowGap: `${Math.max(0, (layerValue('front-info-rows').lineHeight ?? 1.2) * 1.7)}px`
+                  rowGap: `${infoRowsGap}px`
                 }}
               >
                 {infoRows.map((row, idx) => {
                   const IconComp = row.icon;
                   return (
-                    <div key={idx} className="flex items-center gap-1.5 pb-[1px] leading-none min-h-[19px]">
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1.5 pb-[1px] leading-none min-h-[19px]"
+                      style={{ minHeight: `${infoRowsMinHeight}px` }}
+                    >
                       {/* Round icon label button wrapper */}
-                      <div className="w-[17px] h-[17px] bg-[#0c2340] rounded flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-800">
-                        <IconComp size={8.5} className="stroke-[3]" />
+                      <div
+                        className="w-[17px] h-[17px] bg-[#0c2340] rounded flex items-center justify-center text-white flex-shrink-0 shadow border border-slate-800"
+                        style={{ width: `${infoRowsIconBoxSize}px`, height: `${infoRowsIconBoxSize}px` }}
+                      >
+                        <IconComp size={infoRowsIconGlyphSize} className="stroke-[3]" />
                       </div>
                       {/* Wide fixed label column preventing line wrap */}
                       <span
                         className="w-[128px] text-[8.4px] font-bold text-slate-500 uppercase tracking-[0.14em] block text-left shrink-0 whitespace-nowrap"
-                        style={typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 1.1 })}
+                        style={{
+                          ...typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 1.1 }),
+                          width: `${infoRowsLabelWidth}px`,
+                          fontSize: `${infoRowsLabelFont}px`
+                        }}
                       >
                         {row.label}
                       </span>
                       {/* Aligned colons column */}
                       <span
                         className="text-[9.8px] font-black text-[#0c2340] block w-[10px] shrink-0 text-center pr-1"
-                        style={typographyStyle('front-info-rows', { lineHeight: 1 })}
+                        style={{
+                          ...typographyStyle('front-info-rows', { lineHeight: 1 }),
+                          width: `${infoRowsColonWidth}px`,
+                          fontSize: `${infoRowsValueFont}px`
+                        }}
                       >
                         :
                       </span>
                       {/* Uppercase formatted bold values for elite card design */}
                       <span
                         className="flex-1 text-[9.8px] font-black text-[#0c2340] uppercase whitespace-nowrap leading-none mt-[1px] text-left select-all tracking-[0.015em] font-sans"
-                        style={typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 0.15 })}
+                        style={{
+                          ...typographyStyle('front-info-rows', { lineHeight: 1, letterSpacing: 0.15 }),
+                          fontSize: `${infoRowsValueFont}px`
+                        }}
                       >
                         {String(row.value).toUpperCase()}
                       </span>
