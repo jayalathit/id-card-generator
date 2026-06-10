@@ -412,12 +412,12 @@ export const IDCard: React.FC<IDCardProps> = ({
                     {...editorProps('back-brand-tagline')}
                     style={{
                       ...editorProps('back-brand-tagline').style,
-                      ...layerBoxStyle('back-brand-tagline', { width: 146 }),
+                      ...layerBoxStyle('back-brand-tagline', { width: 112 }),
                       ...typographyStyle('back-brand-tagline', { fontSize: 7, lineHeight: 0.82, letterSpacing: 0.1 })
                     }}
                   >
-                    <span className="block whitespace-nowrap">CAMPUS FOR CAREER EDUCATION</span>
-                    <span className="block whitespace-nowrap">&amp; TRAINING INSTITUTE</span>
+                    <span className="block whitespace-nowrap origin-center scale-x-[0.77]">CAMPUS FOR CAREER EDUCATION</span>
+                    <span className="block whitespace-nowrap origin-center scale-x-[0.77]">&amp; TRAINING INSTITUTE</span>
                   </span>
                 </div>
               </div>
