@@ -607,10 +607,10 @@ export const IDCard: React.FC<IDCardProps> = ({
                   {...editorProps('front-brand-logo')}
                   style={{
                     ...editorProps('front-brand-logo').style,
-                    ...layerBoxStyle('front-brand-logo', { width: 48, height: 48 })
+                    ...layerBoxStyle('front-brand-logo', { width: 52, height: 52 })
                   }}
                 >
-                  <BrandLogo size={layerValue('front-brand-logo').width || 48} />
+                  <BrandLogo size={layerValue('front-brand-logo').width || 52} />
                 </div>
                 <div className="flex flex-col items-center justify-center leading-none">
                   <img
