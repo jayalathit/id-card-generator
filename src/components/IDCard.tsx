@@ -592,7 +592,7 @@ export const IDCard: React.FC<IDCardProps> = ({
           </div>
 
           {/* Precision corner accent rails */}
-          <div className="absolute top-[-3px] right-[-6px] w-[666px] h-[13px] pointer-events-none overflow-hidden z-0" {...editorProps('front-wave')}>
+          <div className="absolute top-[-3px] left-[-6px] right-[-6px] h-[13px] pointer-events-none overflow-hidden z-0" {...editorProps('front-wave')}>
             <div className="absolute top-0 inset-x-0 h-[10px] bg-[#0c2340]" />
             <div className="absolute top-[10px] inset-x-0 h-[3px] bg-[#e2a812]" />
           </div>
