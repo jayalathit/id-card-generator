@@ -656,8 +656,12 @@ export const IDCard: React.FC<IDCardProps> = ({
 
             {/* Header right: INSTITUTION branding */}
             <div
-              className={`flex flex-col text-center pr-3 min-w-[120px] ${selectedClass('front-official-title')}`}
+              className={`flex flex-col items-center text-center pr-0 mr-[22px] min-w-[142px] ${selectedClass('front-official-title')}`}
               {...editorProps('front-official-title')}
+              style={{
+                ...editorProps('front-official-title').style,
+                ...layerBoxStyle('front-official-title', { width: 142 })
+              }}
             >
               <span className="font-sans font-black text-[16px] tracking-tight text-[#0c2340] leading-none uppercase">
                 {templateDetails.rightMainHeader || "OFFICIAL ID"}
