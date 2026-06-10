@@ -355,7 +355,7 @@ export const IDCard: React.FC<IDCardProps> = ({
       return (
         <div 
           id={`card-back-${student.id}`}
-          className={`id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
+          className={`id-card-surface relative bg-white overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
           style={cardStyle('660px', '420px')}
         >
           {/* Watermark in background */}
@@ -583,7 +583,7 @@ export const IDCard: React.FC<IDCardProps> = ({
       return (
         <div 
           id={`card-front-${student.id}`}
-          className={`id-card-surface relative bg-white border border-slate-300 overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
+          className={`id-card-surface relative bg-white overflow-hidden text-slate-800 flex flex-col justify-between p-5 select-none print:m-0 print:border-0 print:shadow-none shadow-xl${cardDesignModeClass}`}
           style={cardStyle('660px', '420px')}
         >
           {/* Watermark in background */}
