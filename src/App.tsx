@@ -8,7 +8,7 @@ import { Student, CardConfig, CanvasElement, TemplateDetails, TemplateSurface } 
 import { IDCard } from './components/IDCard';
 import { SignaturePad } from './components/SignaturePad';
 import { downloadIDCardJPEG, downloadIDCardPDF } from './utils/pdfGenerator';
-import { deleteStudent, loadWorkspaceData, markStudentPdfDownloaded, saveCardConfig, saveStudent } from './services/idCardRepository';
+import { clearStudentPdfDownloaded, deleteStudent, loadWorkspaceData, markStudentPdfDownloaded, saveCardConfig, saveStudent } from './services/idCardRepository';
 import { supabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { BadgeCheck, Check, Edit2, Trash2, Plus, Download, Grid, Image as ImageIcon, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
@@ -556,14 +556,29 @@ export default function App() {
     setDataError('');
     try {
       const storedStudent = await saveStudent(updatedStudent);
+      let nextStudent = storedStudent;
+      if (editingStudentId) {
+        const previousStudent = students.find((student) => student.id === editingStudentId);
+        try {
+          await clearStudentPdfDownloaded(editingStudentId);
+        } catch (error) {
+          console.error('Record updated, but its previous PDF status could not be cleared:', error);
+          nextStudent = {
+            ...storedStudent,
+            pdfDownloadedAt: previousStudent?.pdfDownloadedAt,
+            pdfDownloadMode: previousStudent?.pdfDownloadMode
+          };
+          setDataError(`Record updated, but the previous PDF tick could not be reset: ${errorMessage(error)}`);
+        }
+      }
       if (editingStudentId) {
         setStudents((previous) => previous.map((student) => (
-          student.id === editingStudentId ? storedStudent : student
+          student.id === editingStudentId ? nextStudent : student
         )));
       } else {
-        setStudents((previous) => [storedStudent, ...previous]);
+        setStudents((previous) => [nextStudent, ...previous]);
       }
-      setSelectedStudentId(storedStudent.id);
+      setSelectedStudentId(nextStudent.id);
       setIsEditing(false);
       setEditingStudentId(null);
     } catch (error) {

@@ -443,6 +443,14 @@ export async function deleteStudent(student: Student): Promise<void> {
   }
 }
 
+export async function clearStudentPdfDownloaded(studentId: string): Promise<void> {
+  const { error } = await supabase.storage.from(ASSET_BUCKET).remove([
+    pdfMarkerPath(studentId, 'exact'),
+    pdfMarkerPath(studentId, 'a4_sheet')
+  ]);
+  if (error) throw error;
+}
+
 export async function markStudentPdfDownloaded(
   student: Student,
   mode: NonNullable<Student['pdfDownloadMode']>
