@@ -8,10 +8,10 @@ import { Student, CardConfig, CanvasElement, TemplateDetails, TemplateSurface } 
 import { IDCard } from './components/IDCard';
 import { SignaturePad } from './components/SignaturePad';
 import { downloadIDCardJPEG, downloadIDCardPDF } from './utils/pdfGenerator';
-import { deleteStudent, loadWorkspaceData, saveCardConfig, saveStudent } from './services/idCardRepository';
+import { deleteStudent, loadWorkspaceData, markStudentPdfDownloaded, saveCardConfig, saveStudent } from './services/idCardRepository';
 import { supabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { Check, Edit2, Trash2, Plus, Download, Grid, Image as ImageIcon, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
+import { BadgeCheck, Check, Edit2, Trash2, Plus, Download, Grid, Image as ImageIcon, Settings, Users, Upload, RefreshCw, LogOut, Loader2, Save, Square, Type, Eye, EyeOff } from 'lucide-react';
 import { baseCanvasElement, surfaceFor, visibleLayers } from './designLayers';
 import adminDepartmentSignatureUrl from './assets/admin-department-signature.png';
 
@@ -135,6 +135,20 @@ function errorMessage(error: unknown): string {
     return String(error.message);
   }
   return 'Unknown Supabase error.';
+}
+
+function pdfDownloadTitle(student: Student): string {
+  if (!student.pdfDownloadedAt) return 'PDF not downloaded yet';
+  const downloadedAt = new Date(student.pdfDownloadedAt);
+  const formattedDate = Number.isNaN(downloadedAt.getTime())
+    ? student.pdfDownloadedAt
+    : new Intl.DateTimeFormat('en-GB', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Colombo'
+      }).format(downloadedAt);
+  const layout = student.pdfDownloadMode === 'a4_sheet' ? 'A4 sheet' : 'card size';
+  return `PDF downloaded. Last: ${formattedDate} (${layout}).`;
 }
 
 export default function App() {
@@ -588,18 +602,36 @@ export default function App() {
     setIsGeneratingPdf(true);
     // Give elements a tiny frame to settle and render QR codes
     setTimeout(async () => {
-      const isOperator = activePreviewStudent.cardDesignation === 'operator';
-      const success = await downloadIDCardPDF(
-        activePreviewStudent.name,
-        activePreviewStudent.idNumber,
-        `card-capture-front-${activePreviewStudent.id}`,
-        `card-capture-back-${activePreviewStudent.id}`,
-        mode,
-        isOperator ? 'landscape' : 'portrait'
-      );
-      setIsGeneratingPdf(false);
-      if (!success) {
-        alert('There was an issue generating the PDF. Please check that elements are visible on screen.');
+      try {
+        const isOperator = activePreviewStudent.cardDesignation === 'operator';
+        const success = await downloadIDCardPDF(
+          activePreviewStudent.name,
+          activePreviewStudent.idNumber,
+          `card-capture-front-${activePreviewStudent.id}`,
+          `card-capture-back-${activePreviewStudent.id}`,
+          mode,
+          isOperator ? 'landscape' : 'portrait'
+        );
+        if (!success) {
+          alert('There was an issue generating the PDF. Please check that elements are visible on screen.');
+          return;
+        }
+
+        const savedRecord = students.find((student) => student.id === activePreviewStudent.id);
+        if (savedRecord) {
+          try {
+            const updatedRecord = await markStudentPdfDownloaded(savedRecord, mode);
+            setStudents((previous) => previous.map((student) => (
+              student.id === updatedRecord.id ? updatedRecord : student
+            )));
+            setDataError('');
+          } catch (error) {
+            console.error('PDF downloaded, but its status could not be saved:', error);
+            setDataError(`PDF downloaded successfully, but the download tick could not be saved: ${errorMessage(error)}`);
+          }
+        }
+      } finally {
+        setIsGeneratingPdf(false);
       }
     }, 400);
   };
@@ -1328,13 +1360,31 @@ export default function App() {
                             {student.idNumber}{student.cardDesignation === 'operator' ? ` | Grade ${student.grade || 'A'}` : ''}
                           </span>
                           {/* Rich Badge indicators */}
-                          <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <span className={`text-[8px] px-1.5 py-0.5 rounded font-extrabold uppercase ${student.cardDesignation === 'operator' ? 'bg-[#0c2340]/10 text-[#0c2340]' : 'bg-[#e2a812]/15 text-[#8f6400]'}`}>
-                              {student.cardDesignation === 'operator' ? 'Operator' : 'Trainee'}
+                              {student.cardDesignation === 'operator' ? 'Operator ID' : 'Student ID'}
                             </span>
                             <span className="text-[8px] px-1.5 py-0.5 rounded font-extrabold bg-slate-100 text-slate-600 uppercase">
                               {student.equipmentType === 'backhoe' ? 'JCB Backhoe' : 'Forklift'}
                             </span>
+                            {student.pdfDownloadedAt && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded font-extrabold bg-emerald-100 text-emerald-700 uppercase"
+                                title={pdfDownloadTitle(student)}
+                              >
+                                <BadgeCheck className="w-2.5 h-2.5" />
+                                PDF
+                              </span>
+                            )}
+                            {!student.pdfDownloadedAt && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded font-extrabold bg-slate-100 text-slate-400 uppercase"
+                                title="PDF not downloaded yet"
+                              >
+                                <Download className="w-2.5 h-2.5" />
+                                PDF pending
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

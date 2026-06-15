@@ -6,6 +6,8 @@ const ADMIN_SIGNATURE_SETTING_ID = '__template_admin_signature__';
 const ADMIN_SIGNATURE_PATH_SETTING_ID = '__template_admin_signature_path__';
 const STUDENT_DETAILS_SETTING_ID = '__template_student_details__';
 const OPERATOR_DETAILS_SETTING_ID = '__template_operator_details__';
+const PDF_DOWNLOAD_MARKER_FOLDER = 'pdf-downloads';
+const TRANSPARENT_PNG_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 const STUDENT_HEAD_OFFICE_ADDRESS = 'Jayalath Campus\nNugadolawatta,\nAttanagalla Road,\nPasyala (Off Kandy Road)';
 const OPERATOR_HEAD_OFFICE_ADDRESS = '658, Dr. Danister De Silva Road,\nColombo 9,\nSri Lanka.';
 
@@ -164,6 +166,47 @@ function toDatabaseDate(date: string): string {
   return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : date;
 }
 
+function pdfMarkerStudentId(studentId: string): string {
+  return studentId.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function pdfMarkerPath(studentId: string, mode: NonNullable<Student['pdfDownloadMode']>): string {
+  return `${PDF_DOWNLOAD_MARKER_FOLDER}/${pdfMarkerStudentId(studentId)}--${mode}.png`;
+}
+
+async function loadPdfDownloadMarkers(): Promise<Map<string, Pick<Student, 'pdfDownloadedAt' | 'pdfDownloadMode'>>> {
+  const markers = new Map<string, Pick<Student, 'pdfDownloadedAt' | 'pdfDownloadMode'>>();
+  let offset = 0;
+  const pageSize = 100;
+
+  try {
+    while (true) {
+      const { data, error } = await supabase.storage.from(ASSET_BUCKET).list(PDF_DOWNLOAD_MARKER_FOLDER, {
+        limit: pageSize,
+        offset,
+        sortBy: { column: 'updated_at', order: 'desc' }
+      });
+      if (error) throw error;
+
+      for (const marker of data || []) {
+        const match = marker.name.match(/^(.*)--(exact|a4_sheet)\.png$/);
+        if (!match || markers.has(match[1])) continue;
+        markers.set(match[1], {
+          pdfDownloadedAt: marker.updated_at || marker.created_at || undefined,
+          pdfDownloadMode: match[2] as NonNullable<Student['pdfDownloadMode']>
+        });
+      }
+
+      if (!data || data.length < pageSize) break;
+      offset += pageSize;
+    }
+  } catch (error) {
+    console.warn('Could not load PDF download markers:', error);
+  }
+
+  return markers;
+}
+
 async function signedAssetUrl(path?: string | null): Promise<string | undefined> {
   if (!path) return undefined;
   const { data, error } = await supabase.storage.from(ASSET_BUCKET).createSignedUrl(path, 60 * 60);
@@ -233,7 +276,14 @@ export async function loadWorkspaceData(defaultConfig: CardConfig): Promise<{ st
   if (studentResponse.error) throw studentResponse.error;
   if (configResponse.error) throw configResponse.error;
 
-  const students = await Promise.all((studentResponse.data as StudentRow[]).map(hydrateStudent));
+  const [hydratedStudents, pdfDownloadMarkers] = await Promise.all([
+    Promise.all((studentResponse.data as StudentRow[]).map(hydrateStudent)),
+    loadPdfDownloadMarkers()
+  ]);
+  const students = hydratedStudents.map((student) => ({
+    ...student,
+    ...pdfDownloadMarkers.get(pdfMarkerStudentId(student.id))
+  }));
   const config = configResponse.data
     ? await hydrateConfig(configResponse.data as ConfigRow)
     : defaultConfig;
@@ -382,10 +432,41 @@ export async function deleteStudent(student: Student): Promise<void> {
   const { error } = await supabase.from('students').delete().eq('id', student.id);
   if (error) throw error;
 
-  const paths = [student.photoPath, student.signaturePath].filter((path): path is string => Boolean(path));
+  const paths = [
+    student.photoPath,
+    student.signaturePath,
+    pdfMarkerPath(student.id, 'exact'),
+    pdfMarkerPath(student.id, 'a4_sheet')
+  ].filter((path): path is string => Boolean(path));
   if (paths.length) {
     await supabase.storage.from(ASSET_BUCKET).remove(paths);
   }
+}
+
+export async function markStudentPdfDownloaded(
+  student: Student,
+  mode: NonNullable<Student['pdfDownloadMode']>
+): Promise<Student> {
+  const downloadedAt = new Date().toISOString();
+  const markerResponse = await fetch(TRANSPARENT_PNG_DATA_URL);
+  const markerImage = await markerResponse.blob();
+  const { error: uploadError } = await supabase.storage
+    .from(ASSET_BUCKET)
+    .upload(pdfMarkerPath(student.id, mode), markerImage, {
+      contentType: 'image/png',
+      upsert: true
+    });
+  if (uploadError) throw uploadError;
+
+  const previousMode = mode === 'exact' ? 'a4_sheet' : 'exact';
+  const { error: removeError } = await supabase.storage
+    .from(ASSET_BUCKET)
+    .remove([pdfMarkerPath(student.id, previousMode)]);
+  if (removeError) {
+    console.warn('PDF marker saved, but the previous layout marker could not be removed:', removeError);
+  }
+
+  return { ...student, pdfDownloadedAt: downloadedAt, pdfDownloadMode: mode };
 }
 
 export async function saveCardConfig(config: CardConfig): Promise<CardConfig> {

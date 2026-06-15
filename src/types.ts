@@ -21,6 +21,8 @@ export interface Student {
   cardDesignation?: 'student' | 'operator'; // 'student' or 'operator'
   equipmentType?: 'forklift' | 'backhoe'; // 'forklift' or 'backhoe'
   equipmentClass?: string; // "Counterbalance Forklift / Class A" or "JCB Backhoe Loader / Class A"
+  pdfDownloadedAt?: string; // ISO timestamp of the most recent successful PDF export
+  pdfDownloadMode?: 'exact' | 'a4_sheet';
 }
 
 export type TemplateSurface = 'student-front' | 'student-back' | 'operator-front' | 'operator-back';
