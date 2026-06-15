@@ -416,8 +416,12 @@ export const IDCard: React.FC<IDCardProps> = ({
                       ...typographyStyle('back-brand-tagline', { fontSize: 7, lineHeight: 0.82, letterSpacing: 0.1 })
                     }}
                   >
-                    <span className="block whitespace-nowrap origin-center scale-x-[0.77]">CAMPUS FOR CAREER EDUCATION</span>
-                    <span className="block whitespace-nowrap origin-center scale-x-[0.77]">&amp; TRAINING INSTITUTE</span>
+                    <span className="flex w-full justify-center">
+                      <span className="inline-block whitespace-nowrap origin-center scale-x-[0.77]">CAMPUS FOR CAREER EDUCATION</span>
+                    </span>
+                    <span className="flex w-full justify-center">
+                      <span className="inline-block whitespace-nowrap origin-center scale-x-[0.77]">&amp; TRAINING INSTITUTE</span>
+                    </span>
                   </span>
                 </div>
               </div>
